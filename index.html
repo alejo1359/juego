@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas V44 - Escalera Visible</title>
+    <title>Almacén de Chimbas V45 - Sótano Mejorado</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
@@ -10,35 +10,25 @@
         #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 5; }
         #bloqueo { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; }
         #instrucciones { text-align: center; padding: 30px; border: 4px solid #ffcc00; background: #000; color: white; }
-        
-        #dialogo-box { 
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
-            width: 85%; max-width: 650px; background: rgba(10,10,10,0.98); border: 3px solid #ffcc00;
-            padding: 25px; display: none; pointer-events: auto; z-index: 500;
-        }
-        .opcion-btn {
-            display: block; width: 100%; padding: 12px; margin-top: 12px;
-            background: #1a1a1a; color: #ffcc00; border: 1px solid #ffcc00;
-            cursor: pointer; text-align: left; font-family: 'Courier New', monospace;
-        }
-        .opcion-btn:hover { background: #ffcc00; color: #000; }
-        #mision-ui { position: absolute; top: 20px; left: 20px; font-size: 1.2em; color: #ffcc00; text-shadow: 2px 2px #000; }
+        #dialogo-box { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 600px; background: rgba(0,0,0,0.9); border: 2px solid #ffcc00; padding: 20px; display: none; pointer-events: auto; }
+        .opcion-btn { display: block; width: 100%; padding: 10px; margin-top: 10px; background: #111; color: #ffcc00; border: 1px solid #ffcc00; cursor: pointer; }
+        #mision-ui { position: absolute; top: 20px; left: 20px; font-size: 1.2em; color: #ffcc00; }
     </style>
 </head>
 <body>
 
     <div id="bloqueo">
         <div id="instrucciones">
-            <h1 style="color: #ffcc00; margin-bottom: 15px;">ALMACÉN DE CHIMBAS</h1>
-            <p style="font-size: 1.5em;">CLICK para ENTRAR</p>
-            <p style="font-size: 0.9em; color: #aaa; margin-top:20px;">W,A,S,D: Caminar | ESPACIO: Saltar | SHIFT: Agacharse</p>
+            <h1 style="color: #ffcc00;">ALMACÉN DE CHIMBAS</h1>
+            <p>CLICK PARA ENTRAR</p>
+            <p style="font-size: 0.8em; color: #777; margin-top:15px;">W,A,S,D: Caminar | ESPACIO: Saltar | SHIFT: Agacharse</p>
         </div>
     </div>
 
     <div id="ui">
         <div id="mision-ui">Cajas rojas: 0/3</div>
         <div id="dialogo-box">
-            <p id="texto-jony" style="margin-bottom: 15px; font-weight: bold; color: #fff;"></p>
+            <p id="texto-jony"></p>
             <div id="opciones-contenedor"></div>
         </div>
     </div>
@@ -50,117 +40,94 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020202);
-        scene.fog = new THREE.FogExp2(0x000000, 0.08);
+        scene.fog = new THREE.FogExp2(0x000000, 0.1);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(1);
         document.body.appendChild(renderer.domElement);
 
-        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.4);
+        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.3);
         scene.add(luzAmbiente);
-        const linterna = new THREE.SpotLight(0xffffff, 8, 40, 0.5, 0.2);
+        const linterna = new THREE.SpotLight(0xffffff, 8, 30, 0.6, 0.2);
         camera.add(linterna);
         camera.add(linterna.target);
         linterna.target.position.z = -5;
         scene.add(camera);
 
         const colisiones = [];
-        function crearCaja(w, h, d, x, y, z, color = 0x1a1a1a) {
+        function crearCaja(w, h, d, x, y, z, color = 0x1a1a1a, esPared = true) {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: color }));
             mesh.position.set(x, y, z);
             scene.add(mesh);
-            colisiones.push(new THREE.Box3().setFromObject(mesh));
+            if(esPared) colisiones.push(new THREE.Box3().setFromObject(mesh));
+            return mesh;
         }
 
-        // --- MAPA ---
-        crearCaja(40, 0.1, 40, 0, 0, 0, 0x111111); // Suelo
-        crearCaja(40, 6, 1, 0, 3, -20); // Paredes
-        crearCaja(40, 6, 1, 0, 3, 20);
-        crearCaja(1, 6, 40, -20, 3, 0);
-        crearCaja(1, 6, 40, 20, 3, 0);
+        // --- PLANTA PRINCIPAL ---
+        // El suelo ahora tiene un hueco (son 4 planos rodeando el centro)
+        crearCaja(40, 0.1, 15, 0, 0, -12.5); // Arriba
+        crearCaja(40, 0.1, 15, 0, 0, 12.5);  // Abajo
+        crearCaja(15, 0.1, 10, -12.5, 0, 0); // Izquierda
+        crearCaja(15, 0.1, 10, 12.5, 0, 0);  // Derecha (aquí queda un hueco de 5x10)
 
-        const mesaPos = {x: 8, y: 0.5, z: -5};
-        crearCaja(4, 1.2, 2.5, mesaPos.x, mesaPos.y, mesaPos.z, 0x4e342e);
+        // Paredes
+        crearCaja(40, 8, 1, 0, 4, -20); crearCaja(40, 8, 1, 0, 4, 20);
+        crearCaja(1, 8, 40, -20, 4, 0); crearCaja(1, 8, 40, 20, 4, 0);
 
         // Alacenas
-        for(let i=0; i<3; i++) {
-            crearCaja(8, 4, 2, -10, 2, -10 + (i*10), 0x222222);
-        }
+        for(let i=0; i<3; i++) { crearCaja(6, 4, 2, -12, 2, -10 + (i*10), 0x222222); }
+        crearCaja(4, 1.2, 2.5, 8, 0.5, -5, 0x4e342e); // Mesa Jony
 
-        // --- SÓTANO Y ESCALERA AMARILLA (NUEVA POSICIÓN) ---
-        const sotanoPos = {x: 15, y: -5, z: 5}; 
-        crearCaja(12, 0.1, 12, sotanoPos.x, sotanoPos.y, sotanoPos.z, 0x050505);
-        
-        // Escalones amarillos brillantes
-        for(let i=0; i<10; i++) {
-            const esc = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 0.8), new THREE.MeshBasicMaterial({color: 0xffcc00}));
-            esc.position.set(sotanoPos.x, -i*0.5, sotanoPos.z - 4 + (i*0.7));
-            scene.add(esc);
-        }
+        // --- SÓTANO ---
+        const sX = 15, sY = -7, sZ = 0;
+        crearCaja(10, 0.1, 10, sX, sY, sZ, 0x111111); // Suelo sótano
+        crearCaja(10, 8, 0.5, sX, sY+4, sZ-5, 0x0a0a0a); // Paredes sótano
+        crearCaja(10, 8, 0.5, sX, sY+4, sZ+5, 0x0a0a0a);
+        crearCaja(0.5, 8, 10, sX+5, sY+4, sZ, 0x0a0a0a);
+        const paredEscalera = crearCaja(0.5, 8, 10, sX-5, sY+4, sZ, 0x333333); // Pared con la escalera
 
-        // Luz de guía en la escalera
-        const luzEsq = new THREE.PointLight(0xffcc00, 1, 8);
-        luzEsq.position.set(sotanoPos.x, 1, sotanoPos.z - 4);
-        scene.add(luzEsq);
+        // Escalera de mano visual (amarilla)
+        const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.2, 8, 2), new THREE.MeshBasicMaterial({color: 0xffcc00}));
+        ladder.position.set(sX-4.8, sY+4, sZ);
+        scene.add(ladder);
 
-        // --- CAJAS MISIÓN ---
-        const cajasMision = [];
-        let contador = 0;
+        // Luz de peligro en el agujero
+        const luzRoja = new THREE.PointLight(0xff0000, 2, 8);
+        luzRoja.position.set(sX-3, 0.5, sZ);
+        scene.add(luzRoja);
+
+        // --- OBJETOS Y DIÁLOGOS ---
+        const cajasMision = []; let contador = 0;
         function nuevaCaja(x, y, z) {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({color: 0xff0000}));
-            mesh.position.set(x, y, z);
-            scene.add(mesh);
-            cajasMision.push(mesh);
+            const m = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({color: 0xff0000}));
+            m.position.set(x, y, z); scene.add(m); cajasMision.push(m);
         }
-        nuevaCaja(-15, 0.3, -10); nuevaCaja(15, -4.7, 7); nuevaCaja(-12, 0.3, 10);
+        nuevaCaja(-15, 0.5, -15); nuevaCaja(sX+2, sY+0.5, sZ+2); nuevaCaja(-5, 0.5, 15);
 
-        // --- DIÁLOGOS ---
-        let hablando = false;
-        let yaHablo = false;
-        const boxDialogo = document.getElementById('dialogo-box');
-        const textoJony = document.getElementById('texto-jony');
-        const opcionesCont = document.getElementById('opciones-contenedor');
+        let hablando = false, yaHablo = false;
+        const boxD = document.getElementById('dialogo-box');
+        window.cerrarD = () => { hablando = false; boxD.style.display = 'none'; controls.lock(); };
 
-        function mostrarDialogo() {
-            hablando = true; controls.unlock();
-            boxDialogo.style.display = 'block';
-            textoJony.innerText = "Jony: '¡Alejo! Che, qué suerte que estás. Me olvidé las cajas de herramientas por ahí. ¿Ves la escalera amarilla nueva? Fijate si alguna quedó abajo, yo ni loco bajo con esta oscuridad.'";
-            opcionesCont.innerHTML = "<button class='opcion-btn' onclick='cerrarDialogo()'>No pasa nada Jony, ahí las busco.</button>";
-        }
-        window.cerrarDialogo = () => { hablando = false; boxDialogo.style.display = 'none'; controls.lock(); };
-
-        // --- JONY ---
         let jony, mixer;
-        const loader = new GLTFLoader();
-        loader.load("https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb", (gltf) => {
-            jony = gltf.scene; jony.scale.set(0.5, 0.5, 0.5);
-            jony.position.set(mesaPos.x, 0, mesaPos.z - 1.2);
-            jony.rotation.y = Math.PI * 0.7;
-            scene.add(jony);
+        new GLTFLoader().load("https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb", (g) => {
+            jony = g.scene; jony.scale.set(0.5, 0.5, 0.5); jony.position.set(8, 0, -6.2);
+            jony.rotation.y = Math.PI * 0.7; scene.add(jony);
             mixer = new THREE.AnimationMixer(jony);
-            const idle = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
+            const idle = THREE.AnimationClip.findByName(g.animations, 'Idle');
             if(idle) mixer.clipAction(idle).play();
         });
 
-        // --- MOVIMIENTO Y FÍSICAS ---
         const controls = new PointerLockControls(camera, document.body);
         document.getElementById('bloqueo').addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => { document.getElementById('bloqueo').style.display = 'none'; });
-        controls.addEventListener('unlock', () => { if(!hablando) document.getElementById('bloqueo').style.display = 'flex'; });
-
         const keys = {};
-        let velY = 0; let enSuelo = true; let agachado = false;
+        let velY = 0, enSuelo = true, agachado = false;
         document.addEventListener('keydown', (e) => { 
-            keys[e.code] = true;
+            keys[e.code] = true; 
             if(e.code === 'Space' && enSuelo && !hablando) velY = 0.15;
             if(e.code === 'ShiftLeft') agachado = true;
         });
-        document.addEventListener('keyup', (e) => { 
-            keys[e.code] = false;
-            if(e.code === 'ShiftLeft') agachado = false;
-        });
+        document.addEventListener('keyup', (e) => { keys[e.code] = false; if(e.code === 'ShiftLeft') agachado = false; });
 
         const clock = new THREE.Clock();
         function animate() {
@@ -170,32 +137,50 @@
 
             if (controls.isLocked && !hablando) {
                 const posAnt = camera.position.clone();
-                let spd = agachado ? 0.07 : 0.13;
+                let spd = agachado ? 0.07 : 0.14;
                 if(keys['KeyW']) controls.moveForward(spd);
                 if(keys['KeyS']) controls.moveForward(-spd);
                 if(keys['KeyA']) controls.moveRight(-spd);
                 if(keys['KeyD']) controls.moveRight(spd);
 
-                // GRAVEDAD Y ESCALERA
-                camera.position.y += velY; velY -= 0.008;
-                let sueloY = 1.7;
-                
-                // Zona de la escalera amarilla
-                const distEsc = camera.position.distanceTo(new THREE.Vector3(sotanoPos.x, camera.position.y, sotanoPos.z));
-                if(distEsc < 5) {
-                    let t = Math.min(1, Math.max(0, (camera.position.z - (sotanoPos.z - 4)) / 6));
-                    sueloY = THREE.MathUtils.lerp(1.7, -3.3, t);
-                } else if (camera.position.z > sotanoPos.z && Math.abs(camera.position.x - sotanoPos.x) < 5) {
-                    sueloY = -3.3;
-                }
-                
-                if(agachado) sueloY -= 0.8;
-                if(camera.position.y < sueloY) { camera.position.y = sueloY; velY = 0; enSuelo = true; } else { enSuelo = false; }
+                // --- FÍSICA Y GRAVEDAD ---
+                camera.position.y += velY;
+                velY -= 0.008;
 
-                // COLISIONES
+                // Lógica de Suelos (Planta 0 y Sótano)
+                let nivelSuelo = -100; // Por defecto cae al vacío si no hay nada
+                
+                // Suelo Planta Baja
+                if (Math.abs(camera.position.x) < 20 && Math.abs(camera.position.z) < 20) {
+                    // Si NO está en el hueco del sótano
+                    if (!(camera.position.x > 5 && camera.position.x < 25 && Math.abs(camera.position.z) < 5)) {
+                        nivelSuelo = 1.7;
+                    }
+                }
+                // Suelo Sótano
+                if (Math.abs(camera.position.x - sX) < 5 && Math.abs(camera.position.z - sZ) < 5) {
+                    nivelSuelo = sY + 1.7;
+                }
+
+                if(agachado) nivelSuelo -= 0.8;
+
+                // Colisión con suelo
+                if (camera.position.y < nivelSuelo) {
+                    camera.position.y = nivelSuelo;
+                    velY = 0; enSuelo = true;
+                } else {
+                    enSuelo = false;
+                }
+
+                // SUBIR ESCALERA: Si tocás la pared amarilla, subís
+                if (camera.position.distanceTo(new THREE.Vector3(sX-4.5, camera.position.y, sZ)) < 1.5) {
+                    if (keys['KeyW']) { camera.position.y += 0.15; velY = 0; enSuelo = true; }
+                }
+
+                // COLISIONES PAREDES
                 const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.8, 1, 0.8));
                 colisiones.forEach(b => { if(pBox.intersectsBox(b)) camera.position.copy(posAnt); });
-                
+
                 // RECOLECCIÓN
                 cajasMision.forEach(c => {
                     if(c.visible && camera.position.distanceTo(c.position) < 1.5) {
@@ -204,8 +189,11 @@
                     }
                 });
 
-                if(camera.position.distanceTo(new THREE.Vector3(mesaPos.x, 0, mesaPos.z)) < 3 && !yaHablo) {
-                    yaHablo = true; mostrarDialogo();
+                if(camera.position.distanceTo(new THREE.Vector3(8, 0, -5)) < 3 && !yaHablo) {
+                    yaHablo = true; hablando = true; controls.unlock();
+                    boxD.style.display = 'block';
+                    document.getElementById('texto-jony').innerText = "Jony: '¡Alejo! Che, fijate que hay un hueco ahí a la derecha. Se me cayeron unas herramientas al sótano. Bajá con cuidado, para subir usá la escalera amarilla contra la pared.'";
+                    document.getElementById('opciones-contenedor').innerHTML = "<button class='opcion-btn' onclick='cerrarD()'>De una, Jony. Ya bajo.</button>";
                 }
             }
             renderer.render(scene, camera);
