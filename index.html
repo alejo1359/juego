@@ -2,19 +2,19 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas V42 - Misiones y Movimiento</title>
+    <title>Almacén de Chimbas V43 - Arreglado</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; user-select: none; }
+        body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
         canvas { display: block; }
         #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 5; }
-        #bloqueo { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; cursor: pointer; }
-        #instrucciones { text-align: center; padding: 30px; border: 4px solid #ff0000; background: #000; }
+        #bloqueo { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; }
+        #instrucciones { text-align: center; padding: 30px; border: 4px solid #ff0000; background: #000; color: white; }
         
         #dialogo-box { 
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 85%; max-width: 650px; background: rgba(10,10,10,0.98); border: 3px solid #00ff00;
-            padding: 25px; display: none; pointer-events: auto; z-index: 200;
+            padding: 25px; display: none; pointer-events: auto; z-index: 500;
         }
         .opcion-btn {
             display: block; width: 100%; padding: 12px; margin-top: 12px;
@@ -22,7 +22,6 @@
             cursor: pointer; text-align: left; font-family: 'Courier New', monospace;
         }
         .opcion-btn:hover { background: #00ff00; color: #000; }
-
         #mision-ui { position: absolute; top: 20px; left: 20px; font-size: 1.2em; color: #00ff00; text-shadow: 2px 2px #000; }
     </style>
 </head>
@@ -31,15 +30,15 @@
     <div id="bloqueo">
         <div id="instrucciones">
             <h1 style="color: red; margin-bottom: 15px;">ALMACÉN DE CHIMBAS</h1>
-            <p>CLICK para EMPEZAR</p>
-            <p style="font-size: 0.8em; color: #777; margin-top:10px;">ESPACIO: Saltar | SHIFT: Agacharse</p>
+            <p style="font-size: 1.5em;">CLICK para EMPEZAR</p>
+            <p style="font-size: 0.9em; color: #aaa; margin-top:20px;">W,A,S,D: Caminar | ESPACIO: Saltar | SHIFT: Agacharse</p>
         </div>
     </div>
 
     <div id="ui">
-        <div id="mision-ui">Cajas encontradas: 0/3</div>
+        <div id="mision-ui">Cajas rojas: 0/3</div>
         <div id="dialogo-box">
-            <p id="texto-jony" style="margin-bottom: 15px; font-weight: bold; font-size: 1.2em; color: #fff;"></p>
+            <p id="texto-jony" style="margin-bottom: 15px; font-weight: bold; color: #fff;"></p>
             <div id="opciones-contenedor"></div>
         </div>
     </div>
@@ -51,7 +50,7 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020202);
-        scene.fog = new THREE.FogExp2(0x000000, 0.07);
+        scene.fog = new THREE.FogExp2(0x000000, 0.08);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -61,22 +60,21 @@
 
         const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(luzAmbiente);
-        const linterna = new THREE.SpotLight(0xffffff, 7, 35, 0.5, 0.2);
+        const linterna = new THREE.SpotLight(0xffffff, 8, 40, 0.5, 0.2);
         camera.add(linterna);
         camera.add(linterna.target);
         linterna.target.position.z = -5;
         scene.add(camera);
 
-        const objetosColision = [];
+        const colisiones = [];
         function crearCaja(w, h, d, x, y, z, color = 0x1a1a1a) {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: color }));
             mesh.position.set(x, y, z);
             scene.add(mesh);
-            objetosColision.push(new THREE.Box3().setFromObject(mesh));
-            return mesh;
+            colisiones.push(new THREE.Box3().setFromObject(mesh));
         }
 
-        // --- MAPA ---
+        // MAPA
         crearCaja(40, 0.1, 40, 0, 0, 0, 0x111111); // Suelo
         crearCaja(40, 6, 1, 0, 3, -20); // Paredes
         crearCaja(40, 6, 1, 0, 3, 20);
@@ -86,72 +84,44 @@
         const mesaPos = {x: 8, y: 0.5, z: -5};
         crearCaja(4, 1.2, 2.5, mesaPos.x, mesaPos.y, mesaPos.z, 0x4e342e);
 
-        // --- SÓTANO ---
-        const sótanoPos = {x: 12, y: -5, z: 12};
-        crearCaja(12, 0.1, 12, sótanoPos.x, sótanoPos.y, sótanoPos.z, 0x050505);
+        // SÓTANO
+        const sotanoPos = {x: 12, y: -5, z: 12};
+        crearCaja(12, 0.1, 12, sotanoPos.x, sotanoPos.y, sotanoPos.z, 0x050505);
+        for(let i=0; i<10; i++) {
+            const esc = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 0.8), new THREE.MeshBasicMaterial({color: 0x880000}));
+            esc.position.set(sotanoPos.x, -i*0.5, sotanoPos.z - 4 + (i*0.7));
+            scene.add(esc);
+        }
 
-        // --- OBJETOS DE MISIÓN (CAJAS ROJAS) ---
+        // CAJAS MISIÓN
         const cajasMision = [];
-        let cajasEncontradas = 0;
-        function crearCajaMision(x, y, z) {
+        let contador = 0;
+        function nuevaCaja(x, y, z) {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({color: 0xff0000}));
             mesh.position.set(x, y, z);
             scene.add(mesh);
             cajasMision.push(mesh);
         }
-        crearCajaMision(-15, 0.3, -15); // Detrás de alacenas
-        crearCajaMision(14, -4.7, 14);  // En el sótano
-        crearCajaMision(-10, 0.3, 10);  // Cerca del maniquí
+        nuevaCaja(-15, 0.3, -10); nuevaCaja(14, -4.7, 14); nuevaCaja(-5, 0.3, 10);
 
-        // --- LÓGICA DIÁLOGOS ---
+        // DIÁLOGOS
         let hablando = false;
         let yaHablo = false;
-        let misionActiva = false;
         const boxDialogo = document.getElementById('dialogo-box');
         const textoJony = document.getElementById('texto-jony');
         const opcionesCont = document.getElementById('opciones-contenedor');
 
-        const dialogoDatos = {
-            inicio: {
-                texto: "Jony: '¡Alejo, amigo! Qué bueno que viniste... che, te pido un favorazo. Me olvidé 3 cajas de herramientas desparramadas y me da un miedo bárbaro ir a buscarlas solo.'",
-                opciones: [
-                    { texto: "¿Dónde están? Yo te ayudo.", siguiente: "ayuda" },
-                    { texto: "Andá vos Jony, no seas miedoso.", siguiente: "broma" }
-                ]
-            },
-            ayuda: {
-                texto: "Jony: '¡Sos un grande! Hay una por los estantes, otra cerca de ese maniquí feo y... la última creo que quedó abajo, en el sótano. Traelas y nos vamos.'",
-                opciones: [{ texto: "Dejámelo a mí, Jony.", siguiente: "salir" }]
-            },
-            broma: {
-                texto: "Jony: 'No te rías, che... en serio pasan cosas raras acá. Si me hacés la gamba te debo una grande.'",
-                opciones: [{ texto: "Está bien, yo las busco.", siguiente: "ayuda" }]
-            }
-        };
-
-        function mostrarDialogo(clave) {
-            if(clave === "salir") {
-                hablando = false; boxDialogo.style.display = 'none'; controls.lock();
-                misionActiva = true; return;
-            }
+        function mostrarDialogo(tipo) {
             hablando = true; controls.unlock();
             boxDialogo.style.display = 'block';
-            textoJony.innerText = dialogoDatos[clave].texto;
-            opcionesCont.innerHTML = "";
-            dialogoDatos[clave].opciones.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = "opcion-btn"; btn.innerText = opt.texto;
-                btn.onclick = () => mostrarDialogo(opt.siguiente);
-                opcionesCont.appendChild(btn);
-            });
+            if(tipo === 'ini') {
+                textoJony.innerText = "Jony: '¡Alejo! Menos mal que llegaste che... ¿Me hacés la gamba? Se me perdieron 3 cajas de herramientas rojas. Buscalas, sobre todo la del sótano que me da cosa ir solo.'";
+                opcionesCont.innerHTML = "<button class='opcion-btn' onclick='cerrarDialogo()'>Dale Jony, yo las busco.</button>";
+            }
         }
+        window.cerrarDialogo = () => { hablando = false; boxDialogo.style.display = 'none'; controls.lock(); };
 
-        // --- FÍSICAS Y MOVIMIENTO ---
-        let velocidadY = 0;
-        let estaEnSuelo = true;
-        let agachado = false;
-        let alturaOjos = 1.7;
-
+        // PERSONAJES
         let jony, maniqui, mixer;
         const loader = new GLTFLoader();
         loader.load("https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb", (gltf) => {
@@ -162,19 +132,22 @@
             mixer = new THREE.AnimationMixer(jony);
             const idle = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
             if(idle) mixer.clipAction(idle).play();
-
-            maniqui = jony.clone(); maniqui.scale.set(0.75, 0.75, 0.75);
-            maniqui.position.set(-10, 0, 10);
+            maniqui = jony.clone(); maniqui.position.set(-10, 0, 10);
             maniqui.traverse(n => { if(n.isMesh) n.material = new THREE.MeshBasicMaterial({color:0xffffff}); });
             scene.add(maniqui);
         });
 
+        // MOVIMIENTO
         const controls = new PointerLockControls(camera, document.body);
         document.getElementById('bloqueo').addEventListener('click', () => controls.lock());
+        controls.addEventListener('lock', () => { document.getElementById('bloqueo').style.display = 'none'; });
+        controls.addEventListener('unlock', () => { if(!hablando) document.getElementById('bloqueo').style.display = 'flex'; });
+
         const keys = {};
+        let velY = 0; let enSuelo = true; let agachado = false;
         document.addEventListener('keydown', (e) => { 
             keys[e.code] = true;
-            if(e.code === 'Space' && estaEnSuelo && !hablando) velocidadY = 0.15;
+            if(e.code === 'Space' && enSuelo && !hablando) velY = 0.15;
             if(e.code === 'ShiftLeft') agachado = true;
         });
         document.addEventListener('keyup', (e) => { 
@@ -189,56 +162,39 @@
             if(mixer) mixer.update(delta);
 
             if (controls.isLocked && !hablando) {
-                const anteriorPos = camera.position.clone();
-                let spd = agachado ? 0.06 : 0.12;
+                const posAnt = camera.position.clone();
+                let spd = agachado ? 0.07 : 0.13;
                 if(keys['KeyW']) controls.moveForward(spd);
                 if(keys['KeyS']) controls.moveForward(-spd);
                 if(keys['KeyA']) controls.moveRight(-spd);
                 if(keys['KeyD']) controls.moveRight(spd);
 
-                // --- Gravedad y Salto ---
-                camera.position.y += velocidadY;
-                velocidadY -= 0.008; // Gravedad
-
-                // Altura según zona (Planta baja o sótano)
-                let nivelSuelo = 1.7;
-                const distEscalera = camera.position.distanceTo(new THREE.Vector3(sótanoPos.x, camera.position.y, sótanoPos.z));
-                if (distEscalera < 5) {
-                    const t = Math.min(1, Math.max(0, (camera.position.z - (sótanoPos.z - 4)) / 6));
-                    nivelSuelo = THREE.MathUtils.lerp(1.7, -3.3, t);
-                } else if (camera.position.z > sótanoPos.z && Math.abs(camera.position.x - sótanoPos.x) < 5) {
-                    nivelSuelo = -3.3;
+                // GRAVEDAD
+                camera.position.y += velY; velY -= 0.008;
+                let sueloY = 1.7;
+                const dEsc = camera.position.distanceTo(new THREE.Vector3(sotanoPos.x, camera.position.y, sotanoPos.z));
+                if(dEsc < 5) {
+                    let t = Math.min(1, Math.max(0, (camera.position.z - (sotanoPos.z - 4)) / 6));
+                    sueloY = THREE.MathUtils.lerp(1.7, -3.3, t);
+                } else if (camera.position.z > sotanoPos.z && Math.abs(camera.position.x - sotanoPos.x) < 5) {
+                    sueloY = -3.3;
                 }
+                if(agachado) sueloY -= 0.8;
+                if(camera.position.y < sueloY) { camera.position.y = sueloY; velY = 0; enSuelo = true; } else { enSuelo = false; }
 
-                if(agachado) nivelSuelo -= 0.8;
-
-                if (camera.position.y < nivelSuelo) {
-                    camera.position.y = nivelSuelo;
-                    velocidadY = 0;
-                    estaEnSuelo = true;
-                } else {
-                    estaEnSuelo = false;
-                }
-
-                // Colisiones
-                const playerBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.8, 1, 0.8));
-                for(let box of objetosColision) {
-                    if(playerBox.intersectsBox(box)) camera.position.copy(anteriorPos);
-                }
-
-                // Recolección
-                cajasMision.forEach((caja, index) => {
-                    if(caja.visible && camera.position.distanceTo(caja.position) < 1.5) {
-                        caja.visible = false;
-                        cajasEncontradas++;
-                        document.getElementById('mision-ui').innerText = "Cajas encontradas: " + cajasEncontradas + "/3";
+                // COLISIONES Y MISION
+                const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.8, 1, 0.8));
+                colisiones.forEach(b => { if(pBox.intersectsBox(b)) camera.position.copy(posAnt); });
+                cajasMision.forEach(c => {
+                    if(c.visible && camera.position.distanceTo(c.position) < 1.5) {
+                        c.visible = false; contador++;
+                        document.getElementById('mision-ui').innerText = "Cajas rojas: " + contador + "/3";
                     }
                 });
 
                 if(camera.position.distanceTo(new THREE.Vector3(mesaPos.x, 0, mesaPos.z)) < 3 && !yaHablo) {
-                    yaHablo = true; mostrarDialogo('inicio');
+                    yaHablo = true; mostrarDialogo('ini');
                 }
-
                 if(maniqui) maniqui.lookAt(camera.position.x, 0, camera.position.z);
             }
             renderer.render(scene, camera);
