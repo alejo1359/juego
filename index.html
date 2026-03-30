@@ -2,15 +2,27 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas V38 - Paredes y Sótano</title>
+    <title>Almacén de Chimbas V39 - Diálogos y Colisiones</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; user-select: none; }
-        canvas { display: block; width: 100% !important; height: 100% !important; }
+        canvas { display: block; }
         #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 5; }
-        #bloqueo { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; cursor: pointer; }
-        #instrucciones { text-align: center; padding: 30px; border: 4px solid #ff0000; background: #000; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
-        #objetivo { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 15px; border-left: 5px solid #00ff00; max-width: 350px; font-size: 1.1em; }
+        #bloqueo { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; cursor: pointer; }
+        #instrucciones { text-align: center; padding: 30px; border: 4px solid #ff0000; background: #000; }
+        
+        /* ESTILO DIÁLOGO V39 */
+        #dialogo-box { 
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 80%; max-width: 600px; background: rgba(0,0,0,0.9); border: 3px solid #00ff00;
+            padding: 20px; display: none; pointer-events: auto; z-index: 10;
+        }
+        .opcion-btn {
+            display: block; width: 100%; padding: 10px; margin-top: 10px;
+            background: #222; color: #00ff00; border: 1px solid #00ff00;
+            cursor: pointer; text-align: left; font-family: 'Courier New', monospace;
+        }
+        .opcion-btn:hover { background: #00ff00; color: #000; }
     </style>
 </head>
 <body>
@@ -18,13 +30,15 @@
     <div id="bloqueo">
         <div id="instrucciones">
             <h1 style="color: red; margin-bottom: 15px;">ALMACÉN DE CHIMBAS</h1>
-            <p style="font-size: 1.2em;">CLICK para EMPEZAR</p>
-            <p style="font-size: 0.8em; color: #aaa; margin-top: 20px;">W,A,S,D: Caminar | MOUSE: Mirar</p>
+            <p>CLICK para EMPEZAR</p>
         </div>
     </div>
 
     <div id="ui">
-        <div id="objetivo">Objetivo: Explora la tienda y el sótano.</div>
+        <div id="dialogo-box">
+            <p id="texto-jony" style="margin-bottom: 15px; font-weight: bold;"></p>
+            <div id="opciones-contenedor"></div>
+        </div>
     </div>
 
     <script type="module">
@@ -44,79 +58,110 @@
 
         const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(luzAmbiente);
-
         const linterna = new THREE.SpotLight(0xffffff, 6, 35, 0.5, 0.2);
         camera.add(linterna);
         camera.add(linterna.target);
         linterna.target.position.z = -5;
         scene.add(camera);
 
-        // --- CONSTRUCCIÓN DE LA TIENDA ---
-        const matPared = new THREE.MeshBasicMaterial({color: 0x1a1a1a});
-        const matSuelo = new THREE.MeshBasicMaterial({color: 0x111111});
-
-        // Suelo Principal
-        const pisoPrincipal = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), matSuelo);
-        pisoPrincipal.rotation.x = -Math.PI / 2;
-        scene.add(pisoPrincipal);
-
-        // Paredes (Caja de la tienda)
-        const crearPared = (w, h, d, x, y, z) => {
-            const p = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matPared);
-            p.position.set(x, y, z);
-            scene.add(p);
-        }
-        crearPared(30, 6, 1, 0, 3, -15); // Fondo
-        crearPared(30, 6, 1, 0, 3, 15);  // Frente
-        crearPared(1, 6, 30, -15, 3, 0); // Izquierda
-        crearPared(1, 6, 30, 15, 3, 0);  // Derecha
-
-        // Alacenas
-        for(let i=0; i<4; i++) {
-            const alacena = new THREE.Mesh(new THREE.BoxGeometry(8, 4, 1.5), new THREE.MeshBasicMaterial({color: 0x222222}));
-            alacena.position.set(-8, 2, -10 + (i*6));
-            scene.add(alacena);
+        // --- CAJAS DE COLISIÓN ---
+        const objetosColision = [];
+        function crearCaja(w, h, d, x, y, z, color = 0x1a1a1a, invisible = false) {
+            const geom = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshBasicMaterial({ color: color, transparent: invisible, opacity: invisible ? 0 : 1 });
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            
+            const box = new THREE.Box3().setFromObject(mesh);
+            objetosColision.push(box);
+            return mesh;
         }
 
-        // Mesa de Jony
-        const mesa = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 1.5), new THREE.MeshBasicMaterial({color: 0x4e342e}));
-        mesa.position.set(5, 0.5, -5);
-        scene.add(mesa);
+        // Suelo y Límites
+        const piso = new THREE.Mesh(new THREE.PlaneGeometry(35, 35), new THREE.MeshBasicMaterial({color: 0x111111}));
+        piso.rotation.x = -Math.PI / 2;
+        scene.add(piso);
+
+        // Paredes
+        crearCaja(35, 6, 1, 0, 3, -16); // Fondo
+        crearCaja(35, 6, 1, 0, 3, 16);  // Frente
+        crearCaja(1, 6, 35, -16, 3, 0); // Izquierda
+        crearCaja(1, 6, 35, 16, 3, 0);  // Derecha
+
+        // Alacenas con colisión
+        for(let i=0; i<3; i++) {
+            crearCaja(8, 4, 1.5, -8, 2, -10 + (i*8), 0x222222);
+        }
+
+        // Mesa de Jony con colisión
+        const mesaMesh = crearCaja(4, 1, 2, 5, 0.5, -5, 0x4e342e);
 
         // --- EL SÓTANO ---
-        // Hueco escalera
-        const huecoEsq = 12, huecoZ = 12;
-        // Habitación de abajo
-        const pisoSótano = new THREE.Mesh(new THREE.PlaneGeometry(15, 15), new THREE.MeshBasicMaterial({color: 0x0a0a0a}));
+        const sótanoX = 12, sótanoZ = 10;
+        const pisoSótano = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshBasicMaterial({color: 0x0a0000}));
         pisoSótano.rotation.x = -Math.PI / 2;
-        pisoSótano.position.set(huecoEsq, -5, huecoZ);
+        pisoSótano.position.set(sótanoX, -5, sótanoZ);
         scene.add(pisoSótano);
 
-        // Paredes del sótano
-        const matParedSótano = new THREE.MeshBasicMaterial({color: 0x050000});
-        const pS1 = new THREE.Mesh(new THREE.BoxGeometry(15, 6, 1), matParedSótano);
-        pS1.position.set(huecoEsq, -2.5, huecoZ - 7.5);
-        scene.add(pS1);
-
-        // Escalones
-        for(let i=0; i<12; i++) {
-            const esc = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.6), new THREE.MeshBasicMaterial({color: 0x880000}));
-            esc.position.set(huecoEsq, -i*0.42, huecoZ - 5 + (i*0.5));
+        for(let i=0; i<10; i++) {
+            const esc = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 0.8), new THREE.MeshBasicMaterial({color: 0x880000}));
+            esc.position.set(sótanoX, -i*0.5, sótanoZ - 4 + (i*0.6));
             scene.add(esc);
         }
 
-        // Luz roja en el sótano
-        const luzSótano = new THREE.PointLight(0xff0000, 1.5, 10);
-        luzSótano.position.set(huecoEsq, -4, huecoZ);
-        scene.add(luzSótano);
+        // --- LÓGICA DE DIÁLOGO ---
+        let hablando = false;
+        const boxDialogo = document.getElementById('dialogo-box');
+        const textoJony = document.getElementById('texto-jony');
+        const opcionesCont = document.getElementById('opciones-contenedor');
 
-        // --- PERSONAJES ---
+        const dialogoDatos = {
+            inicio: {
+                texto: "Jony: '¿Qué hacés acá a esta hora, Alejo? Está por cerrar...'",
+                opciones: [
+                    { texto: "Busco los percheros verdes.", siguiente: "mision" },
+                    { texto: "¿Qué hay en el sótano?", siguiente: "sotano" },
+                    { texto: "Mejor me voy.", siguiente: "cerrar" }
+                ]
+            },
+            mision: {
+                texto: "Jony: 'Ah, están en las alacenas del fondo. Traelos rápido.'",
+                opciones: [{ texto: "Entendido.", siguiente: "cerrar" }]
+            },
+            sotano: {
+                texto: "Jony: 'No bajés ahí... el maniquí se pone raro en la oscuridad.'",
+                opciones: [{ texto: "Voy a echar un ojo igual.", siguiente: "cerrar" }]
+            },
+            cerrar: { texto: "", opciones: [] }
+        };
+
+        function mostrarDialogo(clave) {
+            const data = dialogoDatos[clave];
+            if (!data.texto) { 
+                hablando = false; 
+                boxDialogo.style.display = 'none'; 
+                controls.lock(); 
+                return; 
+            }
+            hablando = true;
+            controls.unlock();
+            boxDialogo.style.display = 'block';
+            textoJony.innerText = data.texto;
+            opcionesCont.innerHTML = "";
+            data.opciones.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "opcion-btn";
+                btn.innerText = opt.texto;
+                btn.onclick = () => mostrarDialogo(opt.siguiente);
+                opcionesCont.appendChild(btn);
+            });
+        }
+
+        // --- MODELOS ---
         let jony, maniqui, mixer;
-        const clock = new THREE.Clock();
         const loader = new GLTFLoader();
-        const urlJony = "https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb";
-
-        loader.load(urlJony, (gltf) => {
+        loader.load("https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb", (gltf) => {
             jony = gltf.scene;
             jony.scale.set(0.5, 0.5, 0.5);
             jony.position.set(5, 0, -5.8);
@@ -128,50 +173,53 @@
 
             maniqui = jony.clone();
             maniqui.scale.set(0.7, 0.7, 0.7);
-            maniqui.position.set(-5, 0, 5);
-            maniqui.traverse((n) => {
-                if (n.isMesh) {
-                    n.material = new THREE.MeshBasicMaterial({color: 0xffffff});
-                    if(n.name.includes("Extra")) n.visible = false;
-                }
-            });
+            maniqui.position.set(-8, 0, 8);
+            maniqui.traverse(n => { if(n.isMesh) n.material = new THREE.MeshBasicMaterial({color:0xffffff}); });
             scene.add(maniqui);
         });
 
         const controls = new PointerLockControls(camera, document.body);
-        const bloqueoUI = document.getElementById('bloqueo');
-        bloqueoUI.addEventListener('click', () => { controls.lock(); });
-        controls.addEventListener('lock', () => { bloqueoUI.style.display = 'none'; });
-        controls.addEventListener('unlock', () => { bloqueoUI.style.display = 'flex'; });
+        document.getElementById('bloqueo').addEventListener('click', () => controls.lock());
+        controls.addEventListener('lock', () => document.getElementById('bloqueo').style.display = 'none');
+        controls.addEventListener('unlock', () => { if(!hablando) document.getElementById('bloqueo').style.display = 'flex'; });
 
         const keys = {};
-        camera.position.set(0, 1.7, 10);
+        document.addEventListener('keydown', (e) => keys[e.code] = true);
+        document.addEventListener('keyup', (e) => keys[e.code] = false);
 
-        document.addEventListener('keydown', (e) => { keys[e.code] = true; });
-        document.addEventListener('keyup', (e) => { keys[e.code] = false; });
-
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             if(mixer) mixer.update(delta);
 
-            if (controls.isLocked) {
+            if (controls.isLocked && !hablando) {
+                const anteriorPos = camera.position.clone();
                 const spd = 0.12;
                 if(keys['KeyW']) controls.moveForward(spd);
                 if(keys['KeyS']) controls.moveForward(-spd);
                 if(keys['KeyA']) controls.moveRight(-spd);
                 if(keys['KeyD']) controls.moveRight(spd);
 
-                // --- Lógica de Altura (Gravedad simple para el sótano) ---
-                const distAlHueco = Math.sqrt(Math.pow(camera.position.x - huecoEsq, 2) + Math.pow(camera.position.z - huecoZ, 2));
-                
-                if (distAlHueco < 4) {
-                    // Si estás cerca del hueco, bajás la altura (simula bajar escaleras)
-                    if(camera.position.y > -3.3) camera.position.y -= 0.1;
+                // Colisiones
+                const playerBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.8, 2, 0.8));
+                for(let box of objetosColision) {
+                    if(playerBox.intersectsBox(box)) {
+                        camera.position.copy(anteriorPos);
+                    }
+                }
+
+                // Escalera / Altura
+                const distEscalera = camera.position.distanceTo(new THREE.Vector3(sótanoX, 0, sótanoZ));
+                if (distEscalera < 4.5) {
+                    if(camera.position.y > -3.3) camera.position.y -= 0.08;
                 } else {
-                    // Altura normal en planta baja
                     if(camera.position.y < 1.7) camera.position.y += 0.1;
-                    else camera.position.y = 1.7;
+                }
+
+                // Activar Diálogo con Jony
+                if(camera.position.distanceTo(new THREE.Vector3(5,0,-5)) < 3) {
+                    mostrarDialogo('inicio');
                 }
 
                 if(maniqui) maniqui.lookAt(camera.position.x, 0, camera.position.z);
@@ -179,12 +227,6 @@
             renderer.render(scene, camera);
         }
         animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
