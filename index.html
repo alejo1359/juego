@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas V40 - Diálogo Fix</title>
+    <title>Almacén de Chimbas V41 - Jony Amigable y Escalera Fix</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; user-select: none; }
@@ -13,12 +13,12 @@
         
         #dialogo-box { 
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
-            width: 80%; max-width: 600px; background: rgba(0,0,0,0.95); border: 3px solid #00ff00;
-            padding: 20px; display: none; pointer-events: auto; z-index: 200;
+            width: 85%; max-width: 650px; background: rgba(10,10,10,0.98); border: 3px solid #00ff00;
+            padding: 25px; display: none; pointer-events: auto; z-index: 200; box-shadow: 0 0 15px rgba(0,255,0,0.3);
         }
         .opcion-btn {
-            display: block; width: 100%; padding: 12px; margin-top: 10px;
-            background: #111; color: #00ff00; border: 1px solid #00ff00;
+            display: block; width: 100%; padding: 12px; margin-top: 12px;
+            background: #1a1a1a; color: #00ff00; border: 1px solid #00ff00;
             cursor: pointer; text-align: left; font-family: 'Courier New', monospace; font-size: 1.1em;
         }
         .opcion-btn:hover { background: #00ff00; color: #000; }
@@ -29,13 +29,13 @@
     <div id="bloqueo">
         <div id="instrucciones">
             <h1 style="color: red; margin-bottom: 15px;">ALMACÉN DE CHIMBAS</h1>
-            <p>Hacé CLICK para ENTRAR</p>
+            <p>Hacé CLICK para EMPEZAR</p>
         </div>
     </div>
 
     <div id="ui">
         <div id="dialogo-box">
-            <p id="texto-jony" style="margin-bottom: 15px; font-weight: bold; font-size: 1.2em; color: #fff;"></p>
+            <p id="texto-jony" style="margin-bottom: 15px; font-weight: bold; font-size: 1.2em; color: #fff; line-height: 1.4;"></p>
             <div id="opciones-contenedor"></div>
         </div>
     </div>
@@ -47,7 +47,7 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020202);
-        scene.fog = new THREE.FogExp2(0x000000, 0.08);
+        scene.fog = new THREE.FogExp2(0x000000, 0.07);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -57,7 +57,7 @@
 
         const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(luzAmbiente);
-        const linterna = new THREE.SpotLight(0xffffff, 6, 35, 0.5, 0.2);
+        const linterna = new THREE.SpotLight(0xffffff, 7, 35, 0.5, 0.2);
         camera.add(linterna);
         camera.add(linterna.target);
         linterna.target.position.z = -5;
@@ -68,19 +68,18 @@
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: color, transparent: invisible, opacity: invisible ? 0 : 1 }));
             mesh.position.set(x, y, z);
             scene.add(mesh);
-            objetosColision.push(new THREE.Box3().setFromObject(mesh));
+            if(!invisible) objetosColision.push(new THREE.Box3().setFromObject(mesh));
             return mesh;
         }
 
-        const piso = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshBasicMaterial({color: 0x111111}));
-        piso.rotation.x = -Math.PI / 2;
-        scene.add(piso);
-
+        // --- MAPA ---
+        crearCaja(40, 0.1, 40, 0, 0, 0, 0x111111); // Suelo principal
         crearCaja(40, 6, 1, 0, 3, -20); // Pared fondo
         crearCaja(40, 6, 1, 0, 3, 20);  // Pared frente
         crearCaja(1, 6, 40, -20, 3, 0); // Pared izq
         crearCaja(1, 6, 40, 20, 3, 0);  // Pared der
 
+        // Alacenas
         for(let i=0; i<3; i++) {
             crearCaja(8, 4, 2, -10, 2, -10 + (i*10), 0x222222);
         }
@@ -88,18 +87,18 @@
         const mesaPos = {x: 8, y: 0.5, z: -5};
         crearCaja(4, 1.2, 2.5, mesaPos.x, mesaPos.y, mesaPos.z, 0x4e342e);
 
-        const sótanoPos = {x: 12, y: 0, z: 12};
-        const pisoSótano = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshBasicMaterial({color: 0x0a0000}));
-        pisoSótano.rotation.x = -Math.PI / 2;
-        pisoSótano.position.set(sótanoPos.x, -5, sótanoPos.z);
-        scene.add(pisoSótano);
+        // --- EL SÓTANO Y ESCALERA FIX ---
+        const sótanoPos = {x: 12, y: -5, z: 12};
+        crearCaja(12, 0.1, 12, sótanoPos.x, sótanoPos.y, sótanoPos.z, 0x0a0000); // Suelo sótano
 
+        // Escalones visuales
         for(let i=0; i<10; i++) {
             const esc = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 0.8), new THREE.MeshBasicMaterial({color: 0x880000}));
             esc.position.set(sótanoPos.x, -i*0.5, sótanoPos.z - 4 + (i*0.7));
             scene.add(esc);
         }
 
+        // --- LÓGICA DE DIÁLOGO ---
         let hablando = false;
         let yaHablo = false;
         const boxDialogo = document.getElementById('dialogo-box');
@@ -108,20 +107,19 @@
 
         const dialogoDatos = {
             inicio: {
-                texto: "Jony (sin darte la cara): '¿Qué hacés acá? Ya cerramos...'",
+                texto: "Jony: '¡Ey, Alejo! Qué bueno verte, che... pero tené cuidado. Se escuchan ruidos feos hoy en el depósito.'",
                 opciones: [
-                    { texto: "Solo busco los percheros.", siguiente: "mision" },
-                    { texto: "¿Por qué no me mirás?", siguiente: "miedo" },
-                    { texto: "Mejor me voy.", siguiente: "salir" }
+                    { texto: "Tranca Jony, busco unas cosas y me voy.", siguiente: "mision" },
+                    { texto: "¿Estás bien? Estás temblando.", siguiente: "miedo" }
                 ]
             },
             mision: {
-                texto: "Jony: 'Están por ahí, en el fondo. Buscalos rápido.'",
-                opciones: [{ texto: "[Terminar diálogo]", siguiente: "salir" }]
+                texto: "Jony: 'Dale, hacela corta. Los percheros están en los estantes. Si ves que el maniquí se mueve... no lo mires mucho.'",
+                opciones: [{ texto: "Gracias por avisar, amigo.", siguiente: "salir" }]
             },
             miedo: {
-                texto: "Jony: 'Hay cosas que es mejor no ver de frente, Alejo...'",
-                opciones: [{ texto: "Que raro sos. Chau.", siguiente: "salir" }]
+                texto: "Jony: 'Es que... siento que alguien me mira desde el sótano. Pero no debe ser nada, jaja... cuidate, ¿si?'",
+                opciones: [{ texto: "No pasa nada Jony, cualquier cosa avisame.", siguiente: "salir" }]
             }
         };
 
@@ -130,7 +128,7 @@
                 hablando = false;
                 boxDialogo.style.display = 'none';
                 controls.lock();
-                setTimeout(() => { yaHablo = false; }, 5000); // cooldown de 5 seg
+                setTimeout(() => { yaHablo = false; }, 8000); 
                 return;
             }
             hablando = true;
@@ -153,7 +151,7 @@
             jony = gltf.scene;
             jony.scale.set(0.5, 0.5, 0.5);
             jony.position.set(mesaPos.x, 0, mesaPos.z - 1.2);
-            jony.rotation.y = 0; // MIRANDO HACIA LA PARED (Dándole la espalda al pasillo)
+            jony.rotation.y = Math.PI * 0.7; // Mirando de costado, miedoso
             scene.add(jony);
             mixer = new THREE.AnimationMixer(jony);
             const idle = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
@@ -194,12 +192,22 @@
                     if(playerBox.intersectsBox(box)) camera.position.copy(anteriorPos);
                 }
 
-                const distEscalera = camera.position.distanceTo(new THREE.Vector3(sótanoPos.x, 0, sótanoPos.z));
-                if (distEscalera < 5) {
-                    if(camera.position.y > -3.3) camera.position.y -= 0.08;
+                // --- SISTEMA DE ESCALERA MEJORADO ---
+                const relX = camera.position.x - sótanoPos.x;
+                const relZ = camera.position.z - (sótanoPos.z - 1);
+                
+                // Zona de rampa de la escalera
+                if (Math.abs(relX) < 2 && relZ > -4 && relZ < 4) {
+                    // Calcula la altura según qué tan profundo estás en la escalera
+                    const t = (relZ + 3) / 6; // de 0 a 1
+                    const targetY = THREE.MathUtils.lerp(1.7, -3.3, t);
+                    camera.position.y = targetY;
+                } else if (camera.position.z > sótanoPos.z && Math.abs(camera.position.x - sótanoPos.x) < 5) {
+                    // Estás adentro del sótano
+                    camera.position.y = -3.3;
                 } else {
-                    if(camera.position.y < 1.7) camera.position.y += 0.1;
-                    else camera.position.y = 1.7;
+                    // Estás en la planta principal
+                    camera.position.y = 1.7;
                 }
 
                 if(camera.position.distanceTo(new THREE.Vector3(mesaPos.x, 0, mesaPos.z)) < 3 && !yaHablo) {
