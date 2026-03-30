@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas V41 - Jony Amigable y Escalera Fix</title>
+    <title>Almacén de Chimbas V42 - Misiones y Movimiento</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; user-select: none; }
@@ -14,14 +14,16 @@
         #dialogo-box { 
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 85%; max-width: 650px; background: rgba(10,10,10,0.98); border: 3px solid #00ff00;
-            padding: 25px; display: none; pointer-events: auto; z-index: 200; box-shadow: 0 0 15px rgba(0,255,0,0.3);
+            padding: 25px; display: none; pointer-events: auto; z-index: 200;
         }
         .opcion-btn {
             display: block; width: 100%; padding: 12px; margin-top: 12px;
             background: #1a1a1a; color: #00ff00; border: 1px solid #00ff00;
-            cursor: pointer; text-align: left; font-family: 'Courier New', monospace; font-size: 1.1em;
+            cursor: pointer; text-align: left; font-family: 'Courier New', monospace;
         }
         .opcion-btn:hover { background: #00ff00; color: #000; }
+
+        #mision-ui { position: absolute; top: 20px; left: 20px; font-size: 1.2em; color: #00ff00; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
@@ -29,13 +31,15 @@
     <div id="bloqueo">
         <div id="instrucciones">
             <h1 style="color: red; margin-bottom: 15px;">ALMACÉN DE CHIMBAS</h1>
-            <p>Hacé CLICK para EMPEZAR</p>
+            <p>CLICK para EMPEZAR</p>
+            <p style="font-size: 0.8em; color: #777; margin-top:10px;">ESPACIO: Saltar | SHIFT: Agacharse</p>
         </div>
     </div>
 
     <div id="ui">
+        <div id="mision-ui">Cajas encontradas: 0/3</div>
         <div id="dialogo-box">
-            <p id="texto-jony" style="margin-bottom: 15px; font-weight: bold; font-size: 1.2em; color: #fff; line-height: 1.4;"></p>
+            <p id="texto-jony" style="margin-bottom: 15px; font-weight: bold; font-size: 1.2em; color: #fff;"></p>
             <div id="opciones-contenedor"></div>
         </div>
     </div>
@@ -55,7 +59,7 @@
         renderer.setPixelRatio(1);
         document.body.appendChild(renderer.domElement);
 
-        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.5);
+        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(luzAmbiente);
         const linterna = new THREE.SpotLight(0xffffff, 7, 35, 0.5, 0.2);
         camera.add(linterna);
@@ -64,101 +68,102 @@
         scene.add(camera);
 
         const objetosColision = [];
-        function crearCaja(w, h, d, x, y, z, color = 0x1a1a1a, invisible = false) {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: color, transparent: invisible, opacity: invisible ? 0 : 1 }));
+        function crearCaja(w, h, d, x, y, z, color = 0x1a1a1a) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: color }));
             mesh.position.set(x, y, z);
             scene.add(mesh);
-            if(!invisible) objetosColision.push(new THREE.Box3().setFromObject(mesh));
+            objetosColision.push(new THREE.Box3().setFromObject(mesh));
             return mesh;
         }
 
         // --- MAPA ---
-        crearCaja(40, 0.1, 40, 0, 0, 0, 0x111111); // Suelo principal
-        crearCaja(40, 6, 1, 0, 3, -20); // Pared fondo
-        crearCaja(40, 6, 1, 0, 3, 20);  // Pared frente
-        crearCaja(1, 6, 40, -20, 3, 0); // Pared izq
-        crearCaja(1, 6, 40, 20, 3, 0);  // Pared der
-
-        // Alacenas
-        for(let i=0; i<3; i++) {
-            crearCaja(8, 4, 2, -10, 2, -10 + (i*10), 0x222222);
-        }
+        crearCaja(40, 0.1, 40, 0, 0, 0, 0x111111); // Suelo
+        crearCaja(40, 6, 1, 0, 3, -20); // Paredes
+        crearCaja(40, 6, 1, 0, 3, 20);
+        crearCaja(1, 6, 40, -20, 3, 0);
+        crearCaja(1, 6, 40, 20, 3, 0);
 
         const mesaPos = {x: 8, y: 0.5, z: -5};
         crearCaja(4, 1.2, 2.5, mesaPos.x, mesaPos.y, mesaPos.z, 0x4e342e);
 
-        // --- EL SÓTANO Y ESCALERA FIX ---
+        // --- SÓTANO ---
         const sótanoPos = {x: 12, y: -5, z: 12};
-        crearCaja(12, 0.1, 12, sótanoPos.x, sótanoPos.y, sótanoPos.z, 0x0a0000); // Suelo sótano
+        crearCaja(12, 0.1, 12, sótanoPos.x, sótanoPos.y, sótanoPos.z, 0x050505);
 
-        // Escalones visuales
-        for(let i=0; i<10; i++) {
-            const esc = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 0.8), new THREE.MeshBasicMaterial({color: 0x880000}));
-            esc.position.set(sótanoPos.x, -i*0.5, sótanoPos.z - 4 + (i*0.7));
-            scene.add(esc);
+        // --- OBJETOS DE MISIÓN (CAJAS ROJAS) ---
+        const cajasMision = [];
+        let cajasEncontradas = 0;
+        function crearCajaMision(x, y, z) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({color: 0xff0000}));
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            cajasMision.push(mesh);
         }
+        crearCajaMision(-15, 0.3, -15); // Detrás de alacenas
+        crearCajaMision(14, -4.7, 14);  // En el sótano
+        crearCajaMision(-10, 0.3, 10);  // Cerca del maniquí
 
-        // --- LÓGICA DE DIÁLOGO ---
+        // --- LÓGICA DIÁLOGOS ---
         let hablando = false;
         let yaHablo = false;
+        let misionActiva = false;
         const boxDialogo = document.getElementById('dialogo-box');
         const textoJony = document.getElementById('texto-jony');
         const opcionesCont = document.getElementById('opciones-contenedor');
 
         const dialogoDatos = {
             inicio: {
-                texto: "Jony: '¡Ey, Alejo! Qué bueno verte, che... pero tené cuidado. Se escuchan ruidos feos hoy en el depósito.'",
+                texto: "Jony: '¡Alejo, amigo! Qué bueno que viniste... che, te pido un favorazo. Me olvidé 3 cajas de herramientas desparramadas y me da un miedo bárbaro ir a buscarlas solo.'",
                 opciones: [
-                    { texto: "Tranca Jony, busco unas cosas y me voy.", siguiente: "mision" },
-                    { texto: "¿Estás bien? Estás temblando.", siguiente: "miedo" }
+                    { texto: "¿Dónde están? Yo te ayudo.", siguiente: "ayuda" },
+                    { texto: "Andá vos Jony, no seas miedoso.", siguiente: "broma" }
                 ]
             },
-            mision: {
-                texto: "Jony: 'Dale, hacela corta. Los percheros están en los estantes. Si ves que el maniquí se mueve... no lo mires mucho.'",
-                opciones: [{ texto: "Gracias por avisar, amigo.", siguiente: "salir" }]
+            ayuda: {
+                texto: "Jony: '¡Sos un grande! Hay una por los estantes, otra cerca de ese maniquí feo y... la última creo que quedó abajo, en el sótano. Traelas y nos vamos.'",
+                opciones: [{ texto: "Dejámelo a mí, Jony.", siguiente: "salir" }]
             },
-            miedo: {
-                texto: "Jony: 'Es que... siento que alguien me mira desde el sótano. Pero no debe ser nada, jaja... cuidate, ¿si?'",
-                opciones: [{ texto: "No pasa nada Jony, cualquier cosa avisame.", siguiente: "salir" }]
+            broma: {
+                texto: "Jony: 'No te rías, che... en serio pasan cosas raras acá. Si me hacés la gamba te debo una grande.'",
+                opciones: [{ texto: "Está bien, yo las busco.", siguiente: "ayuda" }]
             }
         };
 
         function mostrarDialogo(clave) {
             if(clave === "salir") {
-                hablando = false;
-                boxDialogo.style.display = 'none';
-                controls.lock();
-                setTimeout(() => { yaHablo = false; }, 8000); 
-                return;
+                hablando = false; boxDialogo.style.display = 'none'; controls.lock();
+                misionActiva = true; return;
             }
-            hablando = true;
-            controls.unlock();
+            hablando = true; controls.unlock();
             boxDialogo.style.display = 'block';
             textoJony.innerText = dialogoDatos[clave].texto;
             opcionesCont.innerHTML = "";
             dialogoDatos[clave].opciones.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = "opcion-btn";
-                btn.innerText = opt.texto;
+                btn.className = "opcion-btn"; btn.innerText = opt.texto;
                 btn.onclick = () => mostrarDialogo(opt.siguiente);
                 opcionesCont.appendChild(btn);
             });
         }
 
+        // --- FÍSICAS Y MOVIMIENTO ---
+        let velocidadY = 0;
+        let estaEnSuelo = true;
+        let agachado = false;
+        let alturaOjos = 1.7;
+
         let jony, maniqui, mixer;
         const loader = new GLTFLoader();
         loader.load("https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb", (gltf) => {
-            jony = gltf.scene;
-            jony.scale.set(0.5, 0.5, 0.5);
+            jony = gltf.scene; jony.scale.set(0.5, 0.5, 0.5);
             jony.position.set(mesaPos.x, 0, mesaPos.z - 1.2);
-            jony.rotation.y = Math.PI * 0.7; // Mirando de costado, miedoso
+            jony.rotation.y = Math.PI * 0.7;
             scene.add(jony);
             mixer = new THREE.AnimationMixer(jony);
             const idle = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
             if(idle) mixer.clipAction(idle).play();
 
-            maniqui = jony.clone();
-            maniqui.scale.set(0.75, 0.75, 0.75);
+            maniqui = jony.clone(); maniqui.scale.set(0.75, 0.75, 0.75);
             maniqui.position.set(-10, 0, 10);
             maniqui.traverse(n => { if(n.isMesh) n.material = new THREE.MeshBasicMaterial({color:0xffffff}); });
             scene.add(maniqui);
@@ -166,12 +171,16 @@
 
         const controls = new PointerLockControls(camera, document.body);
         document.getElementById('bloqueo').addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => document.getElementById('bloqueo').style.display = 'none');
-        controls.addEventListener('unlock', () => { if(!hablando) document.getElementById('bloqueo').style.display = 'flex'; });
-
         const keys = {};
-        document.addEventListener('keydown', (e) => keys[e.code] = true);
-        document.addEventListener('keyup', (e) => keys[e.code] = false);
+        document.addEventListener('keydown', (e) => { 
+            keys[e.code] = true;
+            if(e.code === 'Space' && estaEnSuelo && !hablando) velocidadY = 0.15;
+            if(e.code === 'ShiftLeft') agachado = true;
+        });
+        document.addEventListener('keyup', (e) => { 
+            keys[e.code] = false;
+            if(e.code === 'ShiftLeft') agachado = false;
+        });
 
         const clock = new THREE.Clock();
         function animate() {
@@ -181,38 +190,53 @@
 
             if (controls.isLocked && !hablando) {
                 const anteriorPos = camera.position.clone();
-                const spd = 0.12;
+                let spd = agachado ? 0.06 : 0.12;
                 if(keys['KeyW']) controls.moveForward(spd);
                 if(keys['KeyS']) controls.moveForward(-spd);
                 if(keys['KeyA']) controls.moveRight(-spd);
                 if(keys['KeyD']) controls.moveRight(spd);
 
-                const playerBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.8, 2, 0.8));
+                // --- Gravedad y Salto ---
+                camera.position.y += velocidadY;
+                velocidadY -= 0.008; // Gravedad
+
+                // Altura según zona (Planta baja o sótano)
+                let nivelSuelo = 1.7;
+                const distEscalera = camera.position.distanceTo(new THREE.Vector3(sótanoPos.x, camera.position.y, sótanoPos.z));
+                if (distEscalera < 5) {
+                    const t = Math.min(1, Math.max(0, (camera.position.z - (sótanoPos.z - 4)) / 6));
+                    nivelSuelo = THREE.MathUtils.lerp(1.7, -3.3, t);
+                } else if (camera.position.z > sótanoPos.z && Math.abs(camera.position.x - sótanoPos.x) < 5) {
+                    nivelSuelo = -3.3;
+                }
+
+                if(agachado) nivelSuelo -= 0.8;
+
+                if (camera.position.y < nivelSuelo) {
+                    camera.position.y = nivelSuelo;
+                    velocidadY = 0;
+                    estaEnSuelo = true;
+                } else {
+                    estaEnSuelo = false;
+                }
+
+                // Colisiones
+                const playerBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.8, 1, 0.8));
                 for(let box of objetosColision) {
                     if(playerBox.intersectsBox(box)) camera.position.copy(anteriorPos);
                 }
 
-                // --- SISTEMA DE ESCALERA MEJORADO ---
-                const relX = camera.position.x - sótanoPos.x;
-                const relZ = camera.position.z - (sótanoPos.z - 1);
-                
-                // Zona de rampa de la escalera
-                if (Math.abs(relX) < 2 && relZ > -4 && relZ < 4) {
-                    // Calcula la altura según qué tan profundo estás en la escalera
-                    const t = (relZ + 3) / 6; // de 0 a 1
-                    const targetY = THREE.MathUtils.lerp(1.7, -3.3, t);
-                    camera.position.y = targetY;
-                } else if (camera.position.z > sótanoPos.z && Math.abs(camera.position.x - sótanoPos.x) < 5) {
-                    // Estás adentro del sótano
-                    camera.position.y = -3.3;
-                } else {
-                    // Estás en la planta principal
-                    camera.position.y = 1.7;
-                }
+                // Recolección
+                cajasMision.forEach((caja, index) => {
+                    if(caja.visible && camera.position.distanceTo(caja.position) < 1.5) {
+                        caja.visible = false;
+                        cajasEncontradas++;
+                        document.getElementById('mision-ui').innerText = "Cajas encontradas: " + cajasEncontradas + "/3";
+                    }
+                });
 
                 if(camera.position.distanceTo(new THREE.Vector3(mesaPos.x, 0, mesaPos.z)) < 3 && !yaHablo) {
-                    yaHablo = true;
-                    mostrarDialogo('inicio');
+                    yaHablo = true; mostrarDialogo('inicio');
                 }
 
                 if(maniqui) maniqui.lookAt(camera.position.x, 0, camera.position.z);
