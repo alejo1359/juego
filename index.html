@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas V37 - Luz y Espacio</title>
+    <title>Almacén de Chimbas V38 - Paredes y Sótano</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; user-select: none; }
@@ -11,22 +11,20 @@
         #bloqueo { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; cursor: pointer; }
         #instrucciones { text-align: center; padding: 30px; border: 4px solid #ff0000; background: #000; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
         #objetivo { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 15px; border-left: 5px solid #00ff00; max-width: 350px; font-size: 1.1em; }
-        #contador { position: absolute; top: 20px; right: 20px; font-size: 1.5em; color: #00ff00; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="bloqueo">
         <div id="instrucciones">
-            <h1 style="color: red; margin-bottom: 15px;">TURNO DE NOCHE - NOCHE 1</h1>
+            <h1 style="color: red; margin-bottom: 15px;">ALMACÉN DE CHIMBAS</h1>
             <p style="font-size: 1.2em;">CLICK para EMPEZAR</p>
-            <p style="font-size: 0.8em; color: #aaa; margin-top: 20px;">W,A,S,D: Movimiento | MOUSE: Mirar</p>
+            <p style="font-size: 0.8em; color: #aaa; margin-top: 20px;">W,A,S,D: Caminar | MOUSE: Mirar</p>
         </div>
     </div>
 
     <div id="ui">
-        <div id="contador">Percheros: 0/3</div>
-        <div id="objetivo">Objetivo: Hablá con Jony en la mesa.</div>
+        <div id="objetivo">Objetivo: Explora la tienda y el sótano.</div>
     </div>
 
     <script type="module">
@@ -36,7 +34,7 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020202);
-        scene.fog = new THREE.FogExp2(0x000000, 0.08); // Menos niebla para ver mejor
+        scene.fog = new THREE.FogExp2(0x000000, 0.08);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -44,61 +42,75 @@
         renderer.setPixelRatio(1);
         document.body.appendChild(renderer.domElement);
 
-        // --- ILUMINACIÓN REFORZADA V37 ---
-        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.6); // Luz general más fuerte
+        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(luzAmbiente);
 
-        const linterna = new THREE.SpotLight(0xffffff, 6, 40, 0.5, 0.2); // Linterna muy brillante
+        const linterna = new THREE.SpotLight(0xffffff, 6, 35, 0.5, 0.2);
         camera.add(linterna);
         camera.add(linterna.target);
         linterna.target.position.z = -5;
         scene.add(camera);
 
-        // --- LA TIENDA COMPACTA ---
-        const piso = new THREE.Mesh(new THREE.PlaneGeometry(50, 50), new THREE.MeshBasicMaterial({color: 0x111111}));
-        piso.rotation.x = -Math.PI / 2;
-        scene.add(piso);
+        // --- CONSTRUCCIÓN DE LA TIENDA ---
+        const matPared = new THREE.MeshBasicMaterial({color: 0x1a1a1a});
+        const matSuelo = new THREE.MeshBasicMaterial({color: 0x111111});
 
-        // Mesa de Jony (Más cerca)
-        const mesa = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 1), new THREE.MeshBasicMaterial({color: 0x4e342e}));
-        mesa.position.set(0, 0.5, -4);
+        // Suelo Principal
+        const pisoPrincipal = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), matSuelo);
+        pisoPrincipal.rotation.x = -Math.PI / 2;
+        scene.add(pisoPrincipal);
+
+        // Paredes (Caja de la tienda)
+        const crearPared = (w, h, d, x, y, z) => {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matPared);
+            p.position.set(x, y, z);
+            scene.add(p);
+        }
+        crearPared(30, 6, 1, 0, 3, -15); // Fondo
+        crearPared(30, 6, 1, 0, 3, 15);  // Frente
+        crearPared(1, 6, 30, -15, 3, 0); // Izquierda
+        crearPared(1, 6, 30, 15, 3, 0);  // Derecha
+
+        // Alacenas
+        for(let i=0; i<4; i++) {
+            const alacena = new THREE.Mesh(new THREE.BoxGeometry(8, 4, 1.5), new THREE.MeshBasicMaterial({color: 0x222222}));
+            alacena.position.set(-8, 2, -10 + (i*6));
+            scene.add(alacena);
+        }
+
+        // Mesa de Jony
+        const mesa = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 1.5), new THREE.MeshBasicMaterial({color: 0x4e342e}));
+        mesa.position.set(5, 0.5, -5);
         scene.add(mesa);
 
-        // Alacenas alineadas (Solo dos filas cortas)
-        const matAlacena = new THREE.MeshBasicMaterial({color: 0x222222});
-        for(let i=0; i<2; i++) {
-            for(let j=0; j<3; j++) {
-                const alacena = new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, 1), matAlacena);
-                alacena.position.set(-6 + (i*12), 2, -10 - (j*5));
-                scene.add(alacena);
-            }
+        // --- EL SÓTANO ---
+        // Hueco escalera
+        const huecoEsq = 12, huecoZ = 12;
+        // Habitación de abajo
+        const pisoSótano = new THREE.Mesh(new THREE.PlaneGeometry(15, 15), new THREE.MeshBasicMaterial({color: 0x0a0a0a}));
+        pisoSótano.rotation.x = -Math.PI / 2;
+        pisoSótano.position.set(huecoEsq, -5, huecoZ);
+        scene.add(pisoSótano);
+
+        // Paredes del sótano
+        const matParedSótano = new THREE.MeshBasicMaterial({color: 0x050000});
+        const pS1 = new THREE.Mesh(new THREE.BoxGeometry(15, 6, 1), matParedSótano);
+        pS1.position.set(huecoEsq, -2.5, huecoZ - 7.5);
+        scene.add(pS1);
+
+        // Escalones
+        for(let i=0; i<12; i++) {
+            const esc = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.6), new THREE.MeshBasicMaterial({color: 0x880000}));
+            esc.position.set(huecoEsq, -i*0.42, huecoZ - 5 + (i*0.5));
+            scene.add(esc);
         }
 
-        // Sótano (Más cerca, al fondo a la derecha)
-        const sótanoX = 10, sótanoZ = -15;
-        const hueco = new THREE.Mesh(new THREE.PlaneGeometry(3, 5), new THREE.MeshBasicMaterial({color: 0x000000}));
-        hueco.rotation.x = -Math.PI / 2;
-        hueco.position.set(sótanoX, 0.01, sótanoZ);
-        scene.add(hueco);
+        // Luz roja en el sótano
+        const luzSótano = new THREE.PointLight(0xff0000, 1.5, 10);
+        luzSótano.position.set(huecoEsq, -4, huecoZ);
+        scene.add(luzSótano);
 
-        const matEscalón = new THREE.MeshBasicMaterial({color: 0xff0000}); // Rojo brillante
-        for(let i=0; i<8; i++) {
-            const escalón = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 0.4), matEscalón);
-            escalón.position.set(sótanoX, -i*0.4, sótanoZ - 2 + i*0.5);
-            scene.add(escalón);
-        }
-
-        // --- OBJETOS ---
-        const percheros = [];
-        let recolectados = 0;
-        const posPercheros = [[-5, 0.8, -12], [8, 0.8, -10], [0, 0.8, -20]];
-        posPercheros.forEach((pos) => {
-            const p = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.1), new THREE.MeshBasicMaterial({color: 0x00ff00}));
-            p.position.set(pos[0], pos[1], pos[2]);
-            scene.add(p);
-            percheros.push(p);
-        });
-
+        // --- PERSONAJES ---
         let jony, maniqui, mixer;
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
@@ -107,17 +119,16 @@
         loader.load(urlJony, (gltf) => {
             jony = gltf.scene;
             jony.scale.set(0.5, 0.5, 0.5);
-            jony.position.set(0, 0, -4.6);
+            jony.position.set(5, 0, -5.8);
             jony.rotation.y = Math.PI;
             scene.add(jony);
-
             mixer = new THREE.AnimationMixer(jony);
             const idle = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
             if(idle) mixer.clipAction(idle).play();
 
             maniqui = jony.clone();
             maniqui.scale.set(0.7, 0.7, 0.7);
-            maniqui.position.set(5, 0, -6);
+            maniqui.position.set(-5, 0, 5);
             maniqui.traverse((n) => {
                 if (n.isMesh) {
                     n.material = new THREE.MeshBasicMaterial({color: 0xffffff});
@@ -134,7 +145,7 @@
         controls.addEventListener('unlock', () => { bloqueoUI.style.display = 'flex'; });
 
         const keys = {};
-        camera.position.set(0, 1.7, 3);
+        camera.position.set(0, 1.7, 10);
 
         document.addEventListener('keydown', (e) => { keys[e.code] = true; });
         document.addEventListener('keyup', (e) => { keys[e.code] = false; });
@@ -143,25 +154,25 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             if(mixer) mixer.update(delta);
+
             if (controls.isLocked) {
                 const spd = 0.12;
                 if(keys['KeyW']) controls.moveForward(spd);
                 if(keys['KeyS']) controls.moveForward(-spd);
                 if(keys['KeyA']) controls.moveRight(-spd);
                 if(keys['KeyD']) controls.moveRight(spd);
-                camera.position.y = 1.7;
 
-                if(jony && camera.position.distanceTo(jony.position) < 2.5) {
-                    document.getElementById('objetivo').innerText = "Jony: '¡No te quedes ahí, juntá los percheros!'";
+                // --- Lógica de Altura (Gravedad simple para el sótano) ---
+                const distAlHueco = Math.sqrt(Math.pow(camera.position.x - huecoEsq, 2) + Math.pow(camera.position.z - huecoZ, 2));
+                
+                if (distAlHueco < 4) {
+                    // Si estás cerca del hueco, bajás la altura (simula bajar escaleras)
+                    if(camera.position.y > -3.3) camera.position.y -= 0.1;
+                } else {
+                    // Altura normal en planta baja
+                    if(camera.position.y < 1.7) camera.position.y += 0.1;
+                    else camera.position.y = 1.7;
                 }
-
-                percheros.forEach((p) => {
-                    if(p.visible && camera.position.distanceTo(p.position) < 1.4) {
-                        p.visible = false;
-                        recolectados++;
-                        document.getElementById('contador').innerText = "Percheros: " + recolectados + "/3";
-                    }
-                });
 
                 if(maniqui) maniqui.lookAt(camera.position.x, 0, camera.position.z);
             }
