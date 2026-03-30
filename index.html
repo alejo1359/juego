@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Almacén de Chimbas V35 - Misión Percheros</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; user-select: none; }
+        canvas { display: block; width: 100% !important; height: 100% !important; }
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 5; }
+        #bloqueo { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; pointer-events: auto; cursor: pointer; }
+        #instrucciones { text-align: center; padding: 30px; border: 4px solid #ff0000; background: #000; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
+        #objetivo { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 15px; border-left: 5px solid #00ff00; max-width: 350px; font-size: 1.1em; }
+        #contador { position: absolute; top: 20px; right: 20px; font-size: 1.5em; color: #00ff00; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="bloqueo">
+        <div id="instrucciones">
+            <h1 style="color: red; margin-bottom: 15px;">TURNO DE NOCHE</h1>
+            <p style="font-size: 1.2em;">Hacé CLICK para EMPEZAR</p>
+            <p style="font-size: 0.8em; color: #aaa; margin-top: 20px;">W,A,S,D: Caminar | MOUSE: Mirar</p>
+        </div>
+    </div>
+    <div id="ui">
+        <div id="contador">Percheros: 0/3</div>
+        <div id="objetivo">Objetivo: Hablá con Jony.</div>
+    </div>
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/PointerLockControls.js';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x010101);
+        scene.fog = new THREE.FogExp2(0x000000, 0.12);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(1);
+        document.body.appendChild(renderer.domElement);
+
+        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(luzAmbiente);
+
+        const linterna = new THREE.SpotLight(0xffffff, 4, 25, 0.4, 0.3);
+        camera.add(linterna);
+        camera.add(linterna.target);
+        linterna.target.position.z = -5;
+        scene.add(camera);
+
+        const piso = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({color: 0x050505}));
+        piso.rotation.x = -Math.PI / 2;
+        scene.add(piso);
+
+        const materialEstante = new THREE.MeshBasicMaterial({color: 0x080808});
+        for(let i=0; i<4; i++) {
+            const estante = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 15), materialEstante);
+            estante.position.set(-15 + (i*10), 2, -10);
+            scene.add(estante);
+        }
+
+        const percheros = [];
+        let recolectados = 0;
+        const posPercheros = [[-10, 1, -8], [5, 1, -12], [14, 1, -5]];
+        posPercheros.forEach((pos, index) => {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.5, 0.1), new THREE.MeshBasicMaterial({color: 0x00ff00}));
+            p.position.set(pos[0], pos[1], pos[2]);
+            p.name = "perchero_" + index;
+            scene.add(p);
+            percheros.push(p);
+        });
+
+        let jony, maniqui, mixer;
+        const clock = new THREE.Clock();
+        const loader = new GLTFLoader();
+        const urlJony = "https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb";
+
+        loader.load(urlJony, (gltf) => {
+            jony = gltf.scene;
+            jony.scale.set(0.55, 0.55, 0.55);
+            jony.position.set(0, 0, -3);
+            jony.rotation.y = Math.PI;
+            scene.add(jony);
+
+            mixer = new THREE.AnimationMixer(jony);
+            const idle = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
+            if(idle) mixer.clipAction(idle).play();
+
+            maniqui = jony.clone();
+            maniqui.scale.set(0.75, 0.75, 0.75);
+            maniqui.position.set(4, 0, -5);
+            maniqui.traverse((n) => {
+                if (n.isMesh) {
+                    n.material = new THREE.MeshBasicMaterial({color: 0xffffff});
+                    if(n.name.includes("Extra")) n.visible = false;
+                }
+            });
+            scene.add(maniqui);
+        });
+
+        const controls = new PointerLockControls(camera, document.body);
+        const bloqueoUI = document.getElementById('bloqueo');
+        bloqueoUI.addEventListener('click', () => { controls.lock(); });
+        controls.addEventListener('lock', () => { bloqueoUI.style.display = 'none'; });
+        controls.addEventListener('unlock', () => { bloqueoUI.style.display = 'flex'; });
+
+        const keys = {};
+        camera.position.set(0, 1.7, 2);
+
+        document.addEventListener('keydown', (e) => { keys[e.code] = true; });
+        document.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            if(mixer) mixer.update(delta);
+            if (controls.isLocked) {
+                const spd = 0.12;
+                if(keys['KeyW']) controls.moveForward(spd);
+                if(keys['KeyS']) controls.moveForward(-spd);
+                if(keys['KeyA']) controls.moveRight(-spd);
+                if(keys['KeyD']) controls.moveRight(spd);
+                camera.position.y = 1.7;
+                if(jony && camera.position.distanceTo(jony.position) < 2.5) {
+                    document.getElementById('objetivo').innerText = "Jony: '¡Alejo, juntá los 3 percheros verdes!'";
+                }
+                percheros.forEach((p) => {
+                    if(p.visible && camera.position.distanceTo(p.position) < 1.5) {
+                        p.visible = false;
+                        recolectados++;
+                        document.getElementById('contador').innerText = "Percheros: " + recolectados + "/3";
+                        if(recolectados === 3) document.getElementById('objetivo').innerText = "OBJETIVO COMPLETO. Salí del local.";
+                    }
+                });
+                if(maniqui) maniqui.lookAt(camera.position.x, 0, camera.position.z);
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
