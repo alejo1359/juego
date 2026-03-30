@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas V35 - Misión Percheros</title>
+    <title>Almacén de Chimbas V36 - El Sótano</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; user-select: none; }
@@ -15,99 +15,155 @@
     </style>
 </head>
 <body>
+
     <div id="bloqueo">
         <div id="instrucciones">
             <h1 style="color: red; margin-bottom: 15px;">TURNO DE NOCHE</h1>
             <p style="font-size: 1.2em;">Hacé CLICK para EMPEZAR</p>
-            <p style="font-size: 0.8em; color: #aaa; margin-top: 20px;">W,A,S,D: Caminar | MOUSE: Mirar</p>
+            <p style="font-size: 0.8em; color: #aaa; margin-top: 20px;">W,A,S,D: Caminar | MOUSE: Mirar | E: Interactuar</p>
         </div>
     </div>
+
     <div id="ui">
         <div id="contador">Percheros: 0/3</div>
-        <div id="objetivo">Objetivo: Hablá con Jony.</div>
+        <div id="objetivo">Objetivo: Acercate a Jony en la mesa.</div>
     </div>
+
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/PointerLockControls.js';
         import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 
+        // --- SISTEMA ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x010101);
-        scene.fog = new THREE.FogExp2(0x000000, 0.12);
+        scene.fog = new THREE.FogExp2(0x000000, 0.12); // Niebla pesada y oscura
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(1);
+        renderer.setPixelRatio(1); // Optimización estricta para Juana Manso
         document.body.appendChild(renderer.domElement);
 
-        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.2);
+        // --- LUZ ---
+        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.15); // Muy poca luz ambiente
         scene.add(luzAmbiente);
 
-        const linterna = new THREE.SpotLight(0xffffff, 4, 25, 0.4, 0.3);
+        const linterna = new THREE.SpotLight(0xffffff, 4.5, 30, 0.45, 0.3); // Linterna potente
         camera.add(linterna);
         camera.add(linterna.target);
         linterna.target.position.z = -5;
         scene.add(camera);
 
-        const piso = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({color: 0x050505}));
+        // --- EL LOCAL DE CHIMBAS V36 ---
+        // 1. Piso Gigante
+        const piso = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.MeshBasicMaterial({color: 0x050505}));
         piso.rotation.x = -Math.PI / 2;
         scene.add(piso);
 
-        const materialEstante = new THREE.MeshBasicMaterial({color: 0x080808});
-        for(let i=0; i<4; i++) {
-            const estante = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 15), materialEstante);
-            estante.position.set(-15 + (i*10), 2, -10);
-            scene.add(estante);
+        // 2. Paredes Exteriores (Invisibles, para no caerte)
+        const matPared = new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0});
+        const limites = [
+            [120, 5, 1, 0, 0, 60], [120, 5, 1, 0, 0, -60],
+            [1, 5, 120, 60, 0, 0], [1, 5, 120, -60, 0, 0]
+        ];
+        limites.forEach(l => {
+            const p = new THREE.Mesh(new THREE.BoxGeometry(l[0], l[1], l[2]), matPared);
+            p.position.set(l[3], l[4]+2.5, l[5]);
+            scene.add(p);
+        });
+
+        // 3. Mesa de Jony (Mostrador)
+        const mesa = new THREE.Mesh(new THREE.BoxGeometry(4, 1.1, 1.5), new THREE.MeshBasicMaterial({color: 0x3e2723})); // Madera marrón
+        mesa.position.set(0, 0.55, -2); // Jony está atrás
+        scene.add(mesa);
+
+        // 4. Alacenas (Pasillos de estantes altos)
+        const matAlacena = new THREE.MeshBasicMaterial({color: 0x1a1a1a});
+        for(let i=0; i<3; i++) { // 3 Filas de alacenas
+            for(let j=0; j<5; j++) { // 5 alacenas por fila
+                const alacena = new THREE.Mesh(new THREE.BoxGeometry(2, 4.5, 1.5), matAlacena);
+                alacena.position.set(-20 + (i*20), 2.25, -15 - (j*8));
+                scene.add(alacena);
+            }
         }
 
+        // 5. La Escalera al Sótano (Al fondo a la derecha)
+        const sótanoX = 30, sótanoZ = -40;
+        // Hueco en el piso (un parche negro)
+        const hueco = new THREE.Mesh(new THREE.PlaneGeometry(4, 6), new THREE.MeshBasicMaterial({color: 0x000000}));
+        hueco.rotation.x = -Math.PI / 2;
+        hueco.position.set(sótanoX, 0.01, sótanoZ);
+        scene.add(hueco);
+
+        // Escalones de la escalera (Rojos para que resalten)
+        const matEscalón = new THREE.MeshBasicMaterial({color: 0x880000});
+        for(let i=0; i<12; i++) {
+            const escalón = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 0.5), matEscalón);
+            escalón.position.set(sótanoX, -i*0.35, sótanoZ - 2.5 + i*0.4);
+            scene.add(escalón);
+        }
+
+        // --- OBJETOS RECOLECTABLES (Percheros Verdes) V36 ---
         const percheros = [];
         let recolectados = 0;
-        const posPercheros = [[-10, 1, -8], [5, 1, -12], [14, 1, -5]];
+        // Posiciones escondidas entre las alacenas
+        const posPercheros = [[-18, 1, -20], [2, 1, -40], [-18, 1, -50]];
+        
+        const geomPerchero = new THREE.BoxGeometry(0.5, 1.5, 0.1);
+        const matPerchero = new THREE.MeshBasicMaterial({color: 0x00ff00});
         posPercheros.forEach((pos, index) => {
-            const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.5, 0.1), new THREE.MeshBasicMaterial({color: 0x00ff00}));
+            const p = new THREE.Mesh(geomPerchero, matPerchero);
             p.position.set(pos[0], pos[1], pos[2]);
-            p.name = "perchero_" + index;
             scene.add(p);
             percheros.push(p);
         });
 
+        // --- PERSONAJES ---
         let jony, maniqui, mixer;
         const clock = new THREE.Clock();
         const loader = new GLTFLoader();
+        // Url del modelo de Jony (Male Character de Quaternius)
         const urlJony = "https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb";
 
         loader.load(urlJony, (gltf) => {
+            // JONY ORIGINAL (Detrás de la mesa)
             jony = gltf.scene;
-            jony.scale.set(0.55, 0.55, 0.55);
-            jony.position.set(0, 0, -3);
-            jony.rotation.y = Math.PI;
+            jony.scale.set(0.55, 0.55, 0.55); // Escala perfecta Juana Manso
+            jony.position.set(0, 0, -2.8); // Detrás de la mesa (mesa está en -2)
+            jony.rotation.y = Math.PI; // Mirando hacia adelante
             scene.add(jony);
 
+            // Animación Idle de Jony
             mixer = new THREE.AnimationMixer(jony);
             const idle = THREE.AnimationClip.findByName(gltf.animations, 'Idle');
             if(idle) mixer.clipAction(idle).play();
 
+            // MANIQUÍ BLANCO (Clon de Jony - Más alto)
             maniqui = jony.clone();
-            maniqui.scale.set(0.75, 0.75, 0.75);
-            maniqui.position.set(4, 0, -5);
+            maniqui.scale.set(0.8, 0.8, 0.8); // 45% más alto
+            maniqui.position.set(8, 0, -8); // Cerca, pero libre
+            
+            // Limpieza y color blanco
             maniqui.traverse((n) => {
                 if (n.isMesh) {
-                    n.material = new THREE.MeshBasicMaterial({color: 0xffffff});
-                    if(n.name.includes("Extra")) n.visible = false;
+                    n.material = new THREE.MeshBasicMaterial({color: 0xffffff}); // Todo blanco
+                    if(n.name.includes("Extra")) n.visible = false; // Quitar partes raras
                 }
             });
             scene.add(maniqui);
         });
 
+        // --- CONTROLES Y MOVIMIENTO V36 ---
         const controls = new PointerLockControls(camera, document.body);
         const bloqueoUI = document.getElementById('bloqueo');
+        
         bloqueoUI.addEventListener('click', () => { controls.lock(); });
         controls.addEventListener('lock', () => { bloqueoUI.style.display = 'none'; });
         controls.addEventListener('unlock', () => { bloqueoUI.style.display = 'flex'; });
 
         const keys = {};
-        camera.position.set(0, 1.7, 2);
+        camera.position.set(0, 1.7, 5); // Empezás en la entrada
 
         document.addEventListener('keydown', (e) => { keys[e.code] = true; });
         document.addEventListener('keyup', (e) => { keys[e.code] = false; });
@@ -115,30 +171,50 @@
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            if(mixer) mixer.update(delta);
+            if(mixer) mixer.update(delta); // Actualizar animación de Jony
+
             if (controls.isLocked) {
-                const spd = 0.12;
+                const spd = 0.13; // Un cachito más rápido (tienda más grande)
                 if(keys['KeyW']) controls.moveForward(spd);
                 if(keys['KeyS']) controls.moveForward(-spd);
-                if(keys['KeyA']) controls.moveRight(-spd);
-                if(keys['KeyD']) controls.moveRight(spd);
-                camera.position.y = 1.7;
-                if(jony && camera.position.distanceTo(jony.position) < 2.5) {
-                    document.getElementById('objetivo').innerText = "Jony: '¡Alejo, juntá los 3 percheros verdes!'";
+                if(keys['KeyA']) controls.moveRight(-spd); // Izquierda
+                if(keys['KeyD']) controls.moveRight(spd);  // Derecha
+
+                camera.position.y = 1.7; // Altura de ojos bloqueada
+
+                // Lógica de cercanía con Jony
+                if(jony && camera.position.distanceTo(jony.position) < 3.5) {
+                    document.getElementById('objetivo').innerText = "Jony: '¡Movéte Alejo! Buscá los 3 percheros verdes en los pasillos de alacenas.'";
+                    document.getElementById('objetivo').style.color = "#ffff00";
+                } else {
+                    document.getElementById('objetivo').innerText = "Objetivo: Hablá con Jony en la mesa.";
+                    document.getElementById('objetivo').style.color = "#ffffff";
                 }
+
+                // Lógica Recolección de Percheros
                 percheros.forEach((p) => {
-                    if(p.visible && camera.position.distanceTo(p.position) < 1.5) {
-                        p.visible = false;
+                    if(p.visible && camera.position.distanceTo(p.position) < 1.6) {
+                        p.visible = false; // Desaparece
                         recolectados++;
                         document.getElementById('contador').innerText = "Percheros: " + recolectados + "/3";
-                        if(recolectados === 3) document.getElementById('objetivo').innerText = "OBJETIVO COMPLETO. Salí del local.";
+                        
+                        if(recolectados === 3) {
+                            document.getElementById('objetivo').innerText = "Misión Completa. ¡Cuidado con el sótano!";
+                            document.getElementById('objetivo').style.color = "#00ff00";
+                        }
                     }
                 });
-                if(maniqui) maniqui.lookAt(camera.position.x, 0, camera.position.z);
+
+                // El Maniquí Blanco te mira siempre (Terror) V36
+                if(maniqui) {
+                    maniqui.lookAt(camera.position.x, 0, camera.position.z);
+                }
             }
             renderer.render(scene, camera);
         }
         animate();
+
+        // Ajuste de ventana para la netbook
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
