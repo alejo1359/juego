@@ -2,26 +2,34 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas V45 - Sótano Mejorado</title>
+    <title>Almacén de Chimbas V46 - Menú Fix y Guardián Blanco</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { width: 100vw; height: 100vh; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
         canvas { display: block; }
         #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 5; }
-        #bloqueo { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; cursor: pointer; }
-        #instrucciones { text-align: center; padding: 30px; border: 4px solid #ffcc00; background: #000; color: white; }
+        
+        /* ESTILO MENÚ DE INICIO ARREGLADO V46 */
+        #bloqueo { 
+            position: absolute; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.98); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            z-index: 2000; cursor: pointer; text-align: center;
+        }
+        #instrucciones { padding: 40px; border: 4px solid #ffcc00; background: #000; }
+        
         #dialogo-box { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 600px; background: rgba(0,0,0,0.9); border: 2px solid #ffcc00; padding: 20px; display: none; pointer-events: auto; }
         .opcion-btn { display: block; width: 100%; padding: 10px; margin-top: 10px; background: #111; color: #ffcc00; border: 1px solid #ffcc00; cursor: pointer; }
-        #mision-ui { position: absolute; top: 20px; left: 20px; font-size: 1.2em; color: #ffcc00; }
+        #mision-ui { position: absolute; top: 20px; left: 20px; font-size: 1.2em; color: #ffcc00; text-shadow: 2px 2px #000;}
     </style>
 </head>
 <body>
 
-    <div id="bloqueo">
+    <div id="bloqueo" onclick="iniciarJuego()">
         <div id="instrucciones">
-            <h1 style="color: #ffcc00;">ALMACÉN DE CHIMBAS</h1>
-            <p>CLICK PARA ENTRAR</p>
-            <p style="font-size: 0.8em; color: #777; margin-top:15px;">W,A,S,D: Caminar | ESPACIO: Saltar | SHIFT: Agacharse</p>
+            <h1 style="color: #ffcc00; margin-bottom: 20px; font-size: 2.5em;">ALMACÉN DE CHIMBAS</h1>
+            <p style="font-size: 1.8em; color: white;">Hacé CLICK para EMPEZAR</p>
+            <p style="font-size: 0.9em; color: #aaa; margin-top:25px;">W,A,S,D: Caminar | ESPACIO: Saltar | SHIFT: Agacharse</p>
         </div>
     </div>
 
@@ -40,7 +48,7 @@
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020202);
-        scene.fog = new THREE.FogExp2(0x000000, 0.1);
+        scene.fog = new THREE.FogExp2(0x000000, 0.08);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -65,39 +73,30 @@
         }
 
         // --- PLANTA PRINCIPAL ---
-        // El suelo ahora tiene un hueco (son 4 planos rodeando el centro)
-        crearCaja(40, 0.1, 15, 0, 0, -12.5); // Arriba
-        crearCaja(40, 0.1, 15, 0, 0, 12.5);  // Abajo
-        crearCaja(15, 0.1, 10, -12.5, 0, 0); // Izquierda
-        crearCaja(15, 0.1, 10, 12.5, 0, 0);  // Derecha (aquí queda un hueco de 5x10)
+        crearCaja(40, 0.1, 15, 0, 0, -12.5);
+        crearCaja(40, 0.1, 15, 0, 0, 12.5);
+        crearCaja(15, 0.1, 10, -12.5, 0, 0);
+        crearCaja(15, 0.1, 10, 12.5, 0, 0);
 
-        // Paredes
         crearCaja(40, 8, 1, 0, 4, -20); crearCaja(40, 8, 1, 0, 4, 20);
         crearCaja(1, 8, 40, -20, 4, 0); crearCaja(1, 8, 40, 20, 4, 0);
 
-        // Alacenas
         for(let i=0; i<3; i++) { crearCaja(6, 4, 2, -12, 2, -10 + (i*10), 0x222222); }
-        crearCaja(4, 1.2, 2.5, 8, 0.5, -5, 0x4e342e); // Mesa Jony
+        crearCaja(4, 1.2, 2.5, 8, 0.5, -5, 0x4e342e);
 
         // --- SÓTANO ---
         const sX = 15, sY = -7, sZ = 0;
-        crearCaja(10, 0.1, 10, sX, sY, sZ, 0x111111); // Suelo sótano
-        crearCaja(10, 8, 0.5, sX, sY+4, sZ-5, 0x0a0a0a); // Paredes sótano
+        crearCaja(10, 0.1, 10, sX, sY, sZ, 0x111111);
+        crearCaja(10, 8, 0.5, sX, sY+4, sZ-5, 0x0a0a0a);
         crearCaja(10, 8, 0.5, sX, sY+4, sZ+5, 0x0a0a0a);
         crearCaja(0.5, 8, 10, sX+5, sY+4, sZ, 0x0a0a0a);
-        const paredEscalera = crearCaja(0.5, 8, 10, sX-5, sY+4, sZ, 0x333333); // Pared con la escalera
+        crearCaja(0.5, 8, 10, sX-5, sY+4, sZ, 0x333333);
 
-        // Escalera de mano visual (amarilla)
         const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.2, 8, 2), new THREE.MeshBasicMaterial({color: 0xffcc00}));
         ladder.position.set(sX-4.8, sY+4, sZ);
         scene.add(ladder);
 
-        // Luz de peligro en el agujero
-        const luzRoja = new THREE.PointLight(0xff0000, 2, 8);
-        luzRoja.position.set(sX-3, 0.5, sZ);
-        scene.add(luzRoja);
-
-        // --- OBJETOS Y DIÁLOGOS ---
+        // --- OBJETOS MISIÓN ---
         const cajasMision = []; let contador = 0;
         function nuevaCaja(x, y, z) {
             const m = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({color: 0xff0000}));
@@ -105,21 +104,54 @@
         }
         nuevaCaja(-15, 0.5, -15); nuevaCaja(sX+2, sY+0.5, sZ+2); nuevaCaja(-5, 0.5, 15);
 
+        // --- JONY (Modelo original) ---
+        let jony, mixerJony;
+        new GLTFLoader().load("https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb", (g) => {
+            jony = g.scene; jony.scale.set(0.5, 0.5, 0.5); jony.position.set(8, 0, -6.2);
+            jony.rotation.y = Math.PI * 0.7; scene.add(jony);
+            mixerJony = new THREE.AnimationMixer(jony);
+            const idle = THREE.AnimationClip.findByName(g.animations, 'Idle');
+            if(idle) mixerJony.clipAction(idle).play();
+        });
+
+        // --- EL GUARDIÁN BLANCO (Nuevo Modelo V46) ---
+        let guardian, mixerGuardian;
+        const matBlancoPuro = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }); // Material blanco fantasma
+        
+        new GLTFLoader().load("https://raw.githubusercontent.com/Juan-Alejo-Desarrollo/Alejo-Juego-GitHub/main/quaternius_cc0-male-character-1352.glb", (g) => {
+            guardian = g.scene;
+            guardian.scale.set(0.6, 0.6, 0.6); // Un poco más alto que Jony
+            guardian.position.set(2, 0, -8); // Parado en el pasillo central
+            
+            // Forzar material blanco puro a TODO el modelo
+            guardian.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = matBlancoPuro;
+                    if(child.name.includes("Extra")) child.visible = false; // Sacar gorros/mochilas
+                }
+            });
+            
+            scene.add(guardian);
+            
+            mixerGuardian = new THREE.AnimationMixer(guardian);
+            const idle = THREE.AnimationClip.findByName(g.animations, 'Idle');
+            if(idle) mixerGuardian.clipAction(idle).play();
+        });
+
+        // --- DIÁLOGOS ---
         let hablando = false, yaHablo = false;
         const boxD = document.getElementById('dialogo-box');
         window.cerrarD = () => { hablando = false; boxD.style.display = 'none'; controls.lock(); };
 
-        let jony, mixer;
-        new GLTFLoader().load("https://cdn.pixabay.com/download/objects3d/2025/07/17/processed_1161__c5db61fbe5.glb?filename=quaternius_cc0-male-character-1161.glb", (g) => {
-            jony = g.scene; jony.scale.set(0.5, 0.5, 0.5); jony.position.set(8, 0, -6.2);
-            jony.rotation.y = Math.PI * 0.7; scene.add(jony);
-            mixer = new THREE.AnimationMixer(jony);
-            const idle = THREE.AnimationClip.findByName(g.animations, 'Idle');
-            if(idle) mixer.clipAction(idle).play();
-        });
-
+        // --- MOVIMIENTO Y FÍSICAS ---
         const controls = new PointerLockControls(camera, document.body);
-        document.getElementById('bloqueo').addEventListener('click', () => controls.lock());
+        
+        // Lógica de inicio V46
+        window.iniciarJuego = () => {
+            document.getElementById('bloqueo').style.display = 'none';
+            controls.lock();
+        };
+
         const keys = {};
         let velY = 0, enSuelo = true, agachado = false;
         document.addEventListener('keydown', (e) => { 
@@ -133,7 +165,8 @@
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            if(mixer) mixer.update(delta);
+            if(mixerJony) mixerJony.update(delta);
+            if(mixerGuardian) mixerGuardian.update(delta);
 
             if (controls.isLocked && !hablando) {
                 const posAnt = camera.position.clone();
@@ -143,45 +176,31 @@
                 if(keys['KeyA']) controls.moveRight(-spd);
                 if(keys['KeyD']) controls.moveRight(spd);
 
-                // --- FÍSICA Y GRAVEDAD ---
-                camera.position.y += velY;
-                velY -= 0.008;
-
-                // Lógica de Suelos (Planta 0 y Sótano)
-                let nivelSuelo = -100; // Por defecto cae al vacío si no hay nada
+                // --- GRAVEDAD Y SUELOS ---
+                camera.position.y += velY; velY -= 0.008;
+                let nivelSuelo = -100;
                 
-                // Suelo Planta Baja
                 if (Math.abs(camera.position.x) < 20 && Math.abs(camera.position.z) < 20) {
-                    // Si NO está en el hueco del sótano
                     if (!(camera.position.x > 5 && camera.position.x < 25 && Math.abs(camera.position.z) < 5)) {
                         nivelSuelo = 1.7;
                     }
                 }
-                // Suelo Sótano
                 if (Math.abs(camera.position.x - sX) < 5 && Math.abs(camera.position.z - sZ) < 5) {
                     nivelSuelo = sY + 1.7;
                 }
-
                 if(agachado) nivelSuelo -= 0.8;
+                if (camera.position.y < nivelSuelo) { camera.position.y = nivelSuelo; velY = 0; enSuelo = true; } else { enSuelo = false; }
 
-                // Colisión con suelo
-                if (camera.position.y < nivelSuelo) {
-                    camera.position.y = nivelSuelo;
-                    velY = 0; enSuelo = true;
-                } else {
-                    enSuelo = false;
-                }
-
-                // SUBIR ESCALERA: Si tocás la pared amarilla, subís
-                if (camera.position.distanceTo(new THREE.Vector3(sX-4.5, camera.position.y, sZ)) < 1.5) {
-                    if (keys['KeyW']) { camera.position.y += 0.15; velY = 0; enSuelo = true; }
+                // SUBIR ESCALERA
+                if (camera.position.distanceTo(new THREE.Vector3(sX-4.5, camera.position.y, sZ)) < 1.5 && keys['KeyW']) {
+                    camera.position.y += 0.15; velY = 0; enSuelo = true;
                 }
 
                 // COLISIONES PAREDES
                 const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.8, 1, 0.8));
                 colisiones.forEach(b => { if(pBox.intersectsBox(b)) camera.position.copy(posAnt); });
 
-                // RECOLECCIÓN
+                // RECOLECCIÓN CAJAS
                 cajasMision.forEach(c => {
                     if(c.visible && camera.position.distanceTo(c.position) < 1.5) {
                         c.visible = false; contador++;
@@ -189,11 +208,12 @@
                     }
                 });
 
+                // DIÁLOGO CON JONY
                 if(camera.position.distanceTo(new THREE.Vector3(8, 0, -5)) < 3 && !yaHablo) {
                     yaHablo = true; hablando = true; controls.unlock();
                     boxD.style.display = 'block';
-                    document.getElementById('texto-jony').innerText = "Jony: '¡Alejo! Che, fijate que hay un hueco ahí a la derecha. Se me cayeron unas herramientas al sótano. Bajá con cuidado, para subir usá la escalera amarilla contra la pared.'";
-                    document.getElementById('opciones-contenedor').innerHTML = "<button class='opcion-btn' onclick='cerrarD()'>De una, Jony. Ya bajo.</button>";
+                    document.getElementById('texto-jony').innerText = "Jony: '¡Alejo! Qué bueno que viniste... che, tené cuidado con el Guardián Blanco, apareció de la nada en el pasillo central y se queda ahí, mirando fijo. No me animo a pasar.'";
+                    document.getElementById('opciones-contenedor').innerHTML = "<button class='opcion-btn' onclick='cerrarD()'>Tranca Jony, yo me encargo.</button>";
                 }
             }
             renderer.render(scene, camera);
