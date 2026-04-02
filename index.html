@@ -1,4 +1,271 @@
-if(distM < 12 && !persiguiendo) {
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Terror en Chimbas: El Turno de Alejo</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
+        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 10; text-shadow: 2px 2px black; display: none; }
+        #objetivo { position: absolute; bottom: 30px; left: 30px; font-size: 18px; background: rgba(0,0,0,0.8); padding: 15px; border-left: 4px solid #00ff00; }
+        #subtitulos { position: absolute; bottom: 100px; width: 100%; text-align: center; font-size: 20px; color: #ffff00; padding: 0 50px; }
+        #noche-info { position: absolute; top: 30px; right: 30px; font-size: 24px; color: #ff0000; font-weight: bold; }
+        
+        /* ESTILO DEL MENÚ DE INICIO */
+        #menu-inicio { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: radial-gradient(circle, #220000 0%, #000000 100%);
+            color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; text-align: center;
+        }
+        #btn-jugar { 
+            padding: 15px 40px; font-size: 20px; background: #ff0000; color: white; border: none; cursor: pointer; 
+            font-family: 'Courier New'; margin-top: 20px; box-shadow: 0 0 15px red;
+        }
+        #btn-jugar:hover { background: #aa0000; }
+
+        #menu-dialogo { 
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95); border: 2px solid white; padding: 20px; z-index: 2000; color: white;
+            pointer-events: auto; width: 450px; box-shadow: 0 0 20px rgba(255,0,0,0.2);
+        }
+        .opcion-btn { display: block; width: 100%; background: none; color: white; border: 1px solid #555; padding: 12px; margin: 10px 0; cursor: pointer; font-family: 'Courier New'; text-align: left; }
+        .opcion-btn:hover { background: #222; border-color: #00ff00; color: #00ff00; }
+        #pantalla-final { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; color: #ff3333; padding: 50px; box-sizing: border-box; z-index: 1000; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="menu-inicio">
+        <h1 style="font-size: 3.5em; letter-spacing: 10px; color: #ff0000;">TERROR EN CHIMBAS</h1>
+        <p style="max-width: 600px; font-size: 1.2em; line-height: 1.5;">
+            San Juan, Argentina. 2026.<br><br>
+            Sos Alejo, un empleado en una tienda de ropa de Chimbas.<br>
+            Falta poco para irte, pero los maniquíes se sienten... distintos.<br>
+            No dejes que Jony te convenza de quedarte de más.
+        </p>
+        <button id="btn-jugar">EMPEZAR TURNO</button>
+    </div>
+
+    <div id="ui">
+        <div id="noche-info">NOCHE 1</div>
+        <div id="objetivo">Objetivo: Habla con tu compañero Jony.</div>
+        <div id="subtitulos"></div>
+    </div>
+
+    <div id="menu-dialogo">
+        <p id="pregunta-jony" style="color: #00ff00; margin-bottom: 15px; font-weight: bold;"></p>
+        <div id="contenedor-opciones"></div>
+    </div>
+
+    <div id="pantalla-final">
+        <h1 style="border-bottom: 2px solid red;">DIARIO DE SAN JUAN - EDICIÓN CRÓNICA</h1>
+        <div id="noticia-texto" style="font-size: 1.3em; max-width: 700px; margin: 40px auto; line-height: 1.6; text-align: left;"></div>
+        <button onclick="location.reload()" style="background: red; color: white; border: none; padding: 10px 20px; cursor: pointer;">REINTENTAR TURNO</button>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/PointerLockControls.js';
+
+        let noche = 1, misionPaso = 0, cajasRecogidas = 0, muerto = false, persiguiendo = false, iniciado = false;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.7, 13); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // --- ILUMINACIÓN ---
+        const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(luzAmbiental);
+        const luzLocal = new THREE.PointLight(0xffffff, 1, 30);
+        luzLocal.position.set(0, 3, 0);
+        scene.add(luzLocal);
+
+        const flashlight = new THREE.SpotLight(0xffffff, 0, 25, 0.4, 0.5);
+        camera.add(flashlight);
+        const lTarget = new THREE.Object3D();
+        camera.add(lTarget);
+        lTarget.position.set(0, 0, -5);
+        flashlight.target = lTarget;
+        scene.add(camera);
+
+        const colisionables = [];
+        function crearCaja(w, h, d, x, z, color = 0x444444, col = true) {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshPhongMaterial({color: color}));
+            m.position.set(x, h/2, z); scene.add(m);
+            if(col) colisionables.push(new THREE.Box3().setFromObject(m));
+            return m;
+        }
+
+        // --- CONSTRUCCIÓN ---
+        crearCaja(26, 4, 1, 0, -16);
+        crearCaja(1, 4, 32, -13, 0);
+        crearCaja(1, 4, 32, 13, 0);
+        crearCaja(11, 4, 1, -7.5, 16); 
+        crearCaja(11, 4, 1, 7.5, 16);
+        crearCaja(4, 1, 1, 0, 16, 0x444444); 
+        
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshPhongMaterial({color: 0x888888}));
+        floor.rotation.x = -Math.PI/2; scene.add(floor);
+        const grid = new THREE.GridHelper(40, 20, 0x000000, 0x444444);
+        grid.position.y = 0.01; scene.add(grid);
+        crearCaja(4, 1.1, 2, -9, 11, 0x3d2b1f);
+
+        for(let i=0; i<3; i++) {
+            let zP = 5 - (i*9);
+            crearCaja(5, 2.8, 1.2, 7, zP, 0x222222);
+            crearCaja(5, 2.8, 1.2, -7, zP, 0x222222);
+        }
+
+        // --- FUNCIÓN HUMANOS (CON PARTES ACCESIBLES) ---
+        function crearHumanoide(colorRopa, colorPiel, esManiqui = false) {
+            const grupo = new THREE.Group();
+            const matR = new THREE.MeshPhongMaterial({ color: colorRopa, shininess: esManiqui ? 100 : 10 });
+            const matP = new THREE.MeshPhongMaterial({ color: colorPiel });
+
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), matR);
+            torso.position.y = 1.2;
+            torso.name = "torso";
+
+            const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matP);
+            cabeza.position.y = 0.45; cabeza.scale.y = 1.2;
+            torso.add(cabeza);
+
+            const brazoG = new THREE.BoxGeometry(0.12, 0.6, 0.12);
+            const bDer = new THREE.Mesh(brazoG, matP); 
+            bDer.position.set(0.35, 0, 0); bDer.name = "brazoDer";
+            torso.add(bDer);
+
+            const bIzq = bDer.clone(); 
+            bIzq.position.x = -0.35; bIzq.name = "brazoIzq";
+            torso.add(bIzq);
+
+            const piernaG = new THREE.BoxGeometry(0.18, 0.8, 0.18);
+            const pDer = new THREE.Mesh(piernaG, matR); 
+            pDer.position.set(0.15, 0.4, 0); pDer.name = "piernaDer";
+            grupo.add(pDer);
+
+            const pIzq = pDer.clone(); 
+            pIzq.position.x = -0.15; pIzq.name = "piernaIzq";
+            grupo.add(pIzq);
+
+            grupo.add(torso);
+            return grupo;
+        }
+
+        const jony = crearHumanoide(0x2244aa, 0xffdbac, false);
+        jony.position.set(-8, 0, 9); scene.add(jony);
+
+        const maniqui = crearHumanoide(0xffffff, 0xffffff, true);
+        maniqui.position.set(10, 0, -13); scene.add(maniqui);
+
+        // Estáticos
+        const mE1 = crearHumanoide(0xffffff, 0xffffff, true);
+        mE1.position.set(-11, 0, -14); scene.add(mE1);
+        const mE2 = crearHumanoide(0xffffff, 0xffffff, true);
+        mE2.position.set(11, 0, -14); scene.add(mE2);
+
+        // --- LÓGICA ---
+        const controls = new PointerLockControls(camera, document.body);
+        document.getElementById('btn-jugar').onclick = () => {
+            document.getElementById('menu-inicio').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            iniciado = true;
+            controls.lock();
+        };
+
+        const puntosSpawn = [{x: 0, z: 5}, {x: 0, z: -8}, {x: 8, z: 12}, {x: -8, z: -2}, {x: 0, z: -14}];
+        const itemsMision = [];
+        function spawnCajas() {
+            itemsMision.forEach(c => scene.remove(c)); itemsMision.length = 0;
+            puntosSpawn.sort(() => 0.5 - Math.random()).slice(0, 3).forEach(p => {
+                const c = crearCaja(0.7, 0.7, 0.7, p.x, p.z, 0x8b4513, false);
+                itemsMision.push(c);
+            });
+        }
+        spawnCajas();
+
+        const keys = {};
+        document.addEventListener('keydown', (e) => keys[e.code] = true);
+        document.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        function decir(txt) {
+            document.getElementById('subtitulos').innerText = txt;
+            setTimeout(() => { if(document.getElementById('subtitulos').innerText === txt) document.getElementById('subtitulos').innerText = ""; }, 4500);
+        }
+
+        const datosDialogo = {
+            1: { pregunta: "Jony: ¡Hola Alejo! Linda noche para laburar, ¿no?", opciones: [{ t: "Sí, ojalá terminemos temprano.", r: "Jony: Olvidate, hoy el jefe quiere que acomodemos todo." }, { t: "No tengo ganas hoy.", r: "Jony: Yo tampoco, pero bue..." }] },
+            2: { pregunta: "Jony: ¿Me prestás el cargador?", opciones: [{ t: "Está en la entrada.", r: "Jony: Joya, gracias." }, { t: "No traje.", r: "Jony: Uh, bajón." }] },
+            3: { pregunta: "Jony: ¿Sale asado mañana?", opciones: [{ t: "De una.", r: "Jony: ¡Esa!" }, { t: "No puedo.", r: "Jony: Que amargo." }] },
+            4: { pregunta: "Jony: Escuché pasos arriba...", opciones: [{ t: "Ratas.", r: "Jony: Pasos pesados eran..." }, { t: "Flashás.", r: "Jony: Capaz..." }] },
+            5: { pregunta: "Jony: El maniquí se movió...", opciones: [{ t: "Es el viento.", r: "Jony: No hay viento acá Alejo." }, { t: "Estás cansado.", r: "Jony: Puede ser." }] },
+            6: { pregunta: "Jony: Me voy Alejo, esto me da miedo.", opciones: [{ t: "Quedate, es la última.", r: "Jony: Bueno... solo por vos." }, { t: "No seas cagón.", r: "Jony: Tenés razón." }] }
+        };
+
+        function mostrarMenuDialogo(n) {
+            controls.unlock();
+            const menu = document.getElementById('menu-dialogo');
+            menu.style.display = 'block';
+            document.getElementById('pregunta-jony').innerText = datosDialogo[n].pregunta;
+            const cont = document.getElementById('contenedor-opciones');
+            cont.innerHTML = "";
+            datosDialogo[n].opciones.forEach(opc => {
+                const btn = document.createElement('button');
+                btn.className = "opcion-btn"; btn.innerText = opc.t;
+                btn.onclick = () => { menu.style.display = 'none'; decir(opc.r); misionPaso = 1; document.getElementById('objetivo').innerText = "Objetivo: Recoge las 3 cajas."; controls.lock(); };
+                cont.appendChild(btn);
+            });
+        }
+
+        function setNoche(n) {
+            noche = n; misionPaso = 0; cajasRecogidas = 0;
+            camera.position.set(0, 1.7, 13);
+            document.getElementById('noche-info').innerText = `NOCHE ${n}`;
+            document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony.";
+            spawnCajas();
+            if(n === 7) {
+                luzAmbiental.intensity = 0; luzLocal.intensity = 0; flashlight.intensity = 6; 
+                scene.fog = new THREE.Fog(0x000000, 1, 10); 
+                scene.remove(jony);
+                crearCaja(2, 0.01, 2, -8, 9, 0x440000, false);
+                document.getElementById('objetivo').innerText = "Objetivo: ¿Jony?";
+            }
+        }
+
+        function update() {
+            requestAnimationFrame(update);
+            if (!iniciado || !controls.isLocked || muerto) return;
+            const oldPos = camera.position.clone();
+            if(keys['KeyW']) controls.moveForward(0.15);
+            if(keys['KeyS']) controls.moveForward(-0.15);
+            if(keys['KeyA']) controls.moveRight(-0.15);
+            if(keys['KeyD']) controls.moveRight(0.15);
+
+            const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.6, 1.8, 0.6));
+            for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
+
+            const pPos = camera.position;
+            if(noche < 7) {
+                if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) { mostrarMenuDialogo(noche); misionPaso = -1; }
+                if(misionPaso === 1) {
+                    itemsMision.forEach((c, i) => {
+                        if(pPos.distanceTo(c.position) < 2) {
+                            scene.remove(c); itemsMision.splice(i, 1);
+                            cajasRecogidas++; decir(`Cajas: ${cajasRecogidas}/3`);
+                            if(cajasRecogidas === 3) { document.getElementById('objetivo').innerText = "Sal por la puerta."; misionPaso = 2; }
+                        }
+                    });
+                }
+                if(misionPaso === 2 && pPos.z > 15) setNoche(noche + 1);
+            } else {
+                if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 1, 9)) < 2.5) {
+                    decir("¡LO MATÓ!"); misionPaso = 1; document.getElementById('objetivo').innerText = "¡HUYE!";
+                }
+                if(misionPaso === 1) {
+                    const distM = pPos.distanceTo(maniqui.position);
+                    if(distM < 12 && !persiguiendo) {
     persiguiendo = true;
     
     // --- ANIMACIÓN DE TRANSFORMACIÓN A 4 PATAS ---
@@ -21,3 +288,31 @@ if(distM < 12 && !persiguiendo) {
     bDer.position.z = 0.2;
     bIzq.position.z = 0.2;
 }
+                    }
+                    if(persiguiendo) {
+    const d = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
+    maniqui.position.addScaledVector(d, 0.22);
+    
+    // EFECTO DE PASOS INHUMANOS: Sube y baja un poquito rápido
+    maniqui.position.y = 0.3 + Math.sin(Date.now() * 0.01) * 0.1;
+    
+    maniqui.lookAt(pPos.x, 0.5, pPos.z); // Mira hacia donde estás vos
+    
+    if(distM < 1.3) { muerto = true; final(); }
+}
+                    }
+                    if(pPos.z > 15.5) location.reload();
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        function final() {
+            controls.unlock();
+            document.getElementById('pantalla-final').style.display = 'block';
+            document.getElementById('noticia-texto').innerText = "CHIMBAS - Jonathan fue hallado sin vida. Alejo desapareció. Testigos dicen haber visto una figura blanca corriendo de forma inhumana por las calles de San Juan.";
+        }
+        update();
+    </script>
+</body>
+</html>
