@@ -86,10 +86,8 @@
         crearCaja(11, 4, 1, 7.5, 16);
         crearCaja(4, 1, 1, 0, 16, 0x444444); // Dintel (arriba de la puerta)
         
-        // --- LA PUERTA (SALIDA) ---
-        const puertaMarco = crearCaja(4, 3, 0.2, 0, 15.8, 0x222222, false);
-        const cartelSalida = crearCaja(1.5, 0.5, 0.3, 0, 3.2, 15.9, 0x00ff00, false); // Cartel EXIT
-        cartelSalida.material.emissive = new THREE.Color(0x00ff00);
+        // --- LA PUERTA (SALIDA) (Cartel verde ELIMINADO) ---
+        const puertaMarco = crearCaja(4, 3, 0.2, 0, 15.8, 0x111111, false);
 
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshPhongMaterial({color: 0x222222}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
@@ -110,22 +108,44 @@
         }
         spawnCajas();
 
+        // --- JONY ---
         const jony = new THREE.Group();
         const jBody = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.6), new THREE.MeshPhongMaterial({color: 0x2244aa}));
         const jHead = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshPhongMaterial({color: 0xffdbac}));
         jHead.position.y = 0.9; jony.add(jBody, jHead);
         jony.position.set(-8, 0.8, 9); scene.add(jony);
 
-        const maniqui = new THREE.Group();
+        // --- SISTEMA DE MANIQUÍES ---
         const matM = new THREE.MeshPhongMaterial({color: 0xffffff, shininess: 100});
-        const mTorso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.7, 0.2), matM);
-        const mHead = new THREE.Mesh(new THREE.SphereGeometry(0.2), matM); mHead.position.y = 0.5;
-        const mLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.9), matM); mLeg.position.set(0.12, -0.8, 0);
-        const mLegI = mLeg.clone(); mLegI.position.x = -0.12;
-        const mArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.8), matM); mArm.position.set(0.35, 0.1, 0);
-        const mArmI = mArm.clone(); mArmI.position.x = -0.35;
-        maniqui.add(mTorso, mHead, mLeg, mLegI, mArm, mArmI);
+        
+        function crearGeometriaManiqui() {
+            const mGroup = new THREE.Group();
+            const mTorso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.7, 0.2), matM);
+            const mHead = new THREE.Mesh(new THREE.SphereGeometry(0.2), matM); mHead.position.y = 0.5;
+            const mLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.9), matM); mLeg.position.set(0.12, -0.8, 0);
+            const mLegI = mLeg.clone(); mLegI.position.x = -0.12;
+            const mArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.8), matM); mArm.position.set(0.35, 0.1, 0);
+            const mArmI = mArm.clone(); mArmI.position.x = -0.35;
+            mGroup.add(mTorso, mHead, mLeg, mLegI, mArm, mArmI);
+            return mGroup;
+        }
+
+        // 1. El Maniquí Asesino (el único que se mueve)
+        const maniqui = crearGeometriaManiqui();
         maniqui.position.set(10, 1.8, -13); scene.add(maniqui);
+
+        // 2. Maniquí Estático A (Esquina delantera derecha)
+        const maniquiEstaticoA = crearGeometriaManiqui();
+        maniquiEstaticoA.position.set(11, 1.8, 14);
+        maniquiEstaticoA.rotation.y = Math.PI / 4; // Mirando un poco hacia el centro
+        scene.add(maniquiEstaticoA);
+
+        // 3. Maniquí Estático B (Pasillo central, cerca del fondo)
+        const maniquiEstaticoB = crearGeometriaManiqui();
+        maniquiEstaticoB.position.set(0, 1.8, -5);
+        maniquiEstaticoB.rotation.y = Math.PI; // Mirando hacia la entrada
+        scene.add(maniquiEstaticoB);
+
 
         const controls = new PointerLockControls(camera, document.body);
         document.body.addEventListener('click', () => { 
@@ -171,9 +191,12 @@
             document.getElementById('noche-info').innerText = `NOCHE ${n}`;
             document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony.";
             spawnCajas();
+            
+            // Solo movemos el maniquí asesino
             if(n === 4) maniqui.position.set(0, 1.8, -10);
             if(n === 5) maniqui.position.set(10, 1.8, 0);
             if(n === 6) maniqui.position.set(0, 1.8, 8);
+            
             if(n === 7) {
                 luzLocal.intensity = 0; flashlight.intensity = 6; 
                 scene.fog = new THREE.Fog(0x000000, 1, 10); 
@@ -230,7 +253,6 @@
                         if(distM < 1.3) { muerto = true; final(); }
                     }
                     if(pPos.z > 15.5) { 
-                        // GANASTE? (O escapaste)
                         decir("¡Logré salir!"); 
                         location.reload(); 
                     }
