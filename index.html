@@ -57,7 +57,12 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const luzLocal = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2); 
+        // --- ILUMINACIÓN MEJORADA ---
+        const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(luzAmbiental);
+
+        const luzLocal = new THREE.PointLight(0xffffff, 1, 30);
+        luzLocal.position.set(0, 3, 0);
         scene.add(luzLocal);
 
         const flashlight = new THREE.SpotLight(0xffffff, 0, 25, 0.4, 0.5);
@@ -80,21 +85,70 @@
         crearCaja(26, 4, 1, 0, -16); // Pared fondo
         crearCaja(1, 4, 32, -13, 0); // Pared izquierda
         crearCaja(1, 4, 32, 13, 0);  // Pared derecha
-        
         crearCaja(11, 4, 1, -7.5, 16); 
         crearCaja(11, 4, 1, 7.5, 16);
         crearCaja(4, 1, 1, 0, 16, 0x444444); 
         
         const puertaMarco = crearCaja(4, 3, 0.2, 0, 15.8, 0x111111, false);
 
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshPhongMaterial({color: 0x222222}));
+        // Suelo con rejilla de baldosas
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshPhongMaterial({color: 0x888888}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
+        const grid = new THREE.GridHelper(40, 20, 0x000000, 0x444444);
+        grid.position.y = 0.01; scene.add(grid);
+
         const mostrador = crearCaja(4, 1.1, 2, -9, 11, 0x3d2b1f);
+
+        // Estantes con Ropa
+        const coloresRopa = [0xff4444, 0x44ff44, 0x4444ff, 0xeeeeee];
         for(let i=0; i<3; i++) {
-            crearCaja(5, 2.8, 1.2, 7, 5 - (i*9), 0x222222);
-            crearCaja(5, 2.8, 1.2, -7, 5 - (i*9), 0x222222);
+            let zPos = 5 - (i*9);
+            crearCaja(5, 2.8, 1.2, 7, zPos, 0x222222);
+            crearCaja(5, 2.8, 1.2, -7, zPos, 0x222222);
+            
+            // Simular ropa en estantes
+            for(let r=0; r<3; r++) {
+                crearCaja(1, 0.1, 0.8, 7, zPos, 0.5 + (r*0.8), coloresRopa[r], false);
+                crearCaja(1, 0.1, 0.8, -7, zPos, 0.5 + (r*0.8), coloresRopa[3-r], false);
+            }
         }
 
+        // --- FUNCIÓN PARA CREAR PERSONAJES ---
+        function crearHumanoide(colorRopa, colorPiel, esManiqui = false) {
+            const grupo = new THREE.Group();
+            const matCuerpo = new THREE.MeshPhongMaterial({ color: colorRopa, shininess: esManiqui ? 100 : 10 });
+            const matPiel = new THREE.MeshPhongMaterial({ color: colorPiel });
+
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), matCuerpo);
+            torso.position.y = 1.2; grupo.add(torso);
+
+            const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matPiel);
+            cabeza.position.y = 1.65; cabeza.scale.y = 1.2; grupo.add(cabeza);
+
+            const brazoG = new THREE.BoxGeometry(0.12, 0.6, 0.12);
+            const bDer = new THREE.Mesh(brazoG, matPiel); bDer.position.set(0.35, 1.2, 0); grupo.add(bDer);
+            const bIzq = bDer.clone(); bIzq.position.x = -0.35; grupo.add(bIzq);
+
+            const piernaG = new THREE.BoxGeometry(0.18, 0.8, 0.18);
+            const pDer = new THREE.Mesh(piernaG, matCuerpo); pDer.position.set(0.15, 0.4, 0); grupo.add(pDer);
+            const pIzq = pDer.clone(); pIzq.position.x = -0.15; grupo.add(pIzq);
+
+            return grupo;
+        }
+
+        const jony = crearHumanoide(0x2244aa, 0xffdbac, false);
+        jony.position.set(-8, 0, 9); scene.add(jony);
+
+        const maniqui = crearHumanoide(0xffffff, 0xffffff, true);
+        maniqui.position.set(10, 0, -13); scene.add(maniqui);
+
+        const mEstaticoA = crearHumanoide(0xffffff, 0xffffff, true);
+        mEstaticoA.position.set(-11, 0, -14); mEstaticoA.rotation.y = Math.PI/4; scene.add(mEstaticoA);
+
+        const mEstaticoB = crearHumanoide(0xffffff, 0xffffff, true);
+        mEstaticoB.position.set(11, 0, -14); mEstaticoB.rotation.y = -Math.PI/4; scene.add(mEstaticoB);
+
+        // --- LÓGICA DE JUEGO ---
         const puntosSpawn = [{x: 0, z: 5}, {x: 0, z: -8}, {x: 8, z: 12}, {x: -8, z: -2}, {x: 0, z: -14}];
         const itemsMision = [];
         function spawnCajas() {
@@ -105,88 +159,6 @@
             });
         }
         spawnCajas();
-
-        // --- JONY ---
-        // FUNCIÓN PARA CREAR HUMANOS/MANIQUÍES DETALLADOS
-function crearHumanoide(colorRopa, colorPiel, esManiqui = false) {
-    const grupo = new THREE.Group();
-    
-    // Si es maniquí, le damos brillo de plástico (shininess)
-    const matCuerpo = new THREE.MeshPhongMaterial({ 
-        color: colorRopa, 
-        shininess: esManiqui ? 100 : 10 
-    });
-    const matPiel = new THREE.MeshPhongMaterial({ color: colorPiel });
-
-    // Torso (Pecho)
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), matCuerpo);
-    torso.position.y = 1.2;
-    grupo.add(torso);
-
-    // Cabeza (Ovalada)
-    const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matPiel);
-    cabeza.position.y = 1.65;
-    cabeza.scale.y = 1.2; 
-    grupo.add(cabeza);
-
-    // Brazos
-    const brazoG = new THREE.BoxGeometry(0.12, 0.6, 0.12);
-    const brazoDer = new THREE.Mesh(brazoG, matPiel);
-    brazoDer.position.set(0.35, 1.2, 0);
-    grupo.add(brazoDer);
-
-    const brazoIzq = brazoDer.clone();
-    brazoIzq.position.x = -0.35;
-    grupo.add(brazoIzq);
-
-    // Piernas
-    const piernaG = new THREE.BoxGeometry(0.18, 0.8, 0.18);
-    const piernaDer = new THREE.Mesh(piernaG, matCuerpo);
-    piernaDer.position.set(0.15, 0.4, 0);
-    grupo.add(piernaDer);
-
-    const piernaIzq = piernaDer.clone();
-    piernaIzq.position.x = -0.15;
-    grupo.add(piernaIzq);
-
-    return grupo;
-}
-
-// AHORA USAMOS LA FUNCIÓN:
-const jony = crearHumanoide(0x2244aa, 0xffdbac, false); // Jony con ropa azul
-const maniqui = crearHumanoide(0xffffff, 0xffffff, true); // Maniquí blanco brillante
-
-        // --- SISTEMA DE MANIQUÍES ---
-        const matM = new THREE.MeshPhongMaterial({color: 0xffffff, shininess: 100});
-        
-        function crearGeometriaManiqui() {
-            const mGroup = new THREE.Group();
-            const mTorso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.7, 0.2), matM);
-            const mHead = new THREE.Mesh(new THREE.SphereGeometry(0.2), matM); mHead.position.y = 0.5;
-            const mLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.9), matM); mLeg.position.set(0.12, -0.8, 0);
-            const mLegI = mLeg.clone(); mLegI.position.x = -0.12;
-            const mArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.8), matM); mArm.position.set(0.35, 0.1, 0);
-            const mArmI = mArm.clone(); mArmI.position.x = -0.35;
-            mGroup.add(mTorso, mHead, mLeg, mLegI, mArm, mArmI);
-            return mGroup;
-        }
-
-        // 1. Maniquí Asesino (móvil)
-        const maniqui = crearGeometriaManiqui();
-        maniqui.position.set(10, 1.8, -13); scene.add(maniqui);
-
-        // 2. Maniquí Estático A (Fondo Izquierda)
-        const maniquiEstaticoA = crearGeometriaManiqui();
-        maniquiEstaticoA.position.set(-11, 1.8, -14);
-        maniquiEstaticoA.rotation.y = Math.PI / 4; 
-        scene.add(maniquiEstaticoA);
-
-        // 3. Maniquí Estático B (Fondo Derecha)
-        const maniquiEstaticoB = crearGeometriaManiqui();
-        maniquiEstaticoB.position.set(11, 1.8, -14);
-        maniquiEstaticoB.rotation.y = -Math.PI / 4; 
-        scene.add(maniquiEstaticoB);
-
 
         const controls = new PointerLockControls(camera, document.body);
         document.body.addEventListener('click', () => { 
@@ -232,19 +204,16 @@ const maniqui = crearHumanoide(0xffffff, 0xffffff, true); // Maniquí blanco bri
             document.getElementById('noche-info').innerText = `NOCHE ${n}`;
             document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony.";
             spawnCajas();
-            
-            if(n === 4) maniqui.position.set(0, 1.8, -10);
-            if(n === 5) maniqui.position.set(10, 1.8, 0);
-            if(n === 6) maniqui.position.set(0, 1.8, 8);
-            
+            if(n === 4) maniqui.position.set(0, 0, -10);
+            if(n === 5) maniqui.position.set(10, 0, 0);
+            if(n === 6) maniqui.position.set(0, 0, 8);
             if(n === 7) {
-                luzLocal.intensity = 0; flashlight.intensity = 6; 
+                luzAmbiental.intensity = 0; luzLocal.intensity = 0; flashlight.intensity = 6; 
                 scene.fog = new THREE.Fog(0x000000, 1, 10); 
                 scene.remove(jony);
                 crearCaja(0.2, 0.2, 0.8, -8.5, 9.5, 0x2244aa, false);
-                crearCaja(0.2, 0.6, 0.2, -7.5, 9, 0xffdbac, false);
                 crearCaja(2, 0.01, 2, -8, 9, 0x440000, false);
-                maniqui.position.set(0, 1.8, -14);
+                maniqui.position.set(0, 0, -14);
                 document.getElementById('objetivo').innerText = "Objetivo: ¿Jony? ¿Estás ahí?";
                 decir("¡¿Jony?! Se cortó la luz... ¡Respondé!");
             }
@@ -260,13 +229,9 @@ const maniqui = crearHumanoide(0xffffff, 0xffffff, true); // Maniquí blanco bri
             if(keys['KeyA']) controls.moveRight(-speed);
             if(keys['KeyD']) controls.moveRight(speed);
 
-    // AGREGAR ROPA (Pequeños bloques de colores)
-    const colores = [0xff4444, 0x44ff44, 0x4444ff, 0xffff44];
-    for(let r=0; r<4; r++) {
-        const ropa = crearCaja(0.8, 0.1, 0.8, 7, 0.6 + (r*0.2), 5 - (i*9), colores[r], false);
-        const ropaIzq = crearCaja(0.8, 0.1, 0.8, -7, 0.6 + (r*0.2), 5 - (i*9), colores[3-r], false);
-    }
-}for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
+            // Colisiones sencillas
+            const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.6, 1.8, 0.6));
+            for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
 
             const pPos = camera.position;
 
@@ -291,10 +256,9 @@ const maniqui = crearHumanoide(0xffffff, 0xffffff, true); // Maniquí blanco bri
                     const distM = pPos.distanceTo(maniqui.position);
                     if(distM < 12) persiguiendo = true;
                     if(persiguiendo) {
-                        maniqui.position.x += (Math.random() - 0.5) * 0.15;
                         const d = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
                         maniqui.position.addScaledVector(d, 0.16);
-                        maniqui.lookAt(pPos.x, 1.8, pPos.z);
+                        maniqui.lookAt(pPos.x, 0, pPos.z);
                         if(distM < 1.3) { muerto = true; final(); }
                     }
                     if(pPos.z > 15.5) { 
