@@ -5,26 +5,45 @@
     <title>Terror en Chimbas: El Turno de Alejo</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
-        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 10; text-shadow: 2px 2px black; }
+        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 10; text-shadow: 2px 2px black; display: none; }
         #objetivo { position: absolute; bottom: 30px; left: 30px; font-size: 18px; background: rgba(0,0,0,0.8); padding: 15px; border-left: 4px solid #00ff00; }
         #subtitulos { position: absolute; bottom: 100px; width: 100%; text-align: center; font-size: 20px; color: #ffff00; padding: 0 50px; }
         #noche-info { position: absolute; top: 30px; right: 30px; font-size: 24px; color: #ff0000; font-weight: bold; }
         
+        /* ESTILO DEL MENÚ DE INICIO */
+        #menu-inicio { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: radial-gradient(circle, #220000 0%, #000000 100%);
+            color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; text-align: center;
+        }
+        #btn-jugar { 
+            padding: 15px 40px; font-size: 20px; background: #ff0000; color: white; border: none; cursor: pointer; 
+            font-family: 'Courier New'; margin-top: 20px; box-shadow: 0 0 15px red;
+        }
+        #btn-jugar:hover { background: #aa0000; }
+
         #menu-dialogo { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.95); border: 2px solid white; padding: 20px; z-index: 2000; color: white;
             pointer-events: auto; width: 450px; box-shadow: 0 0 20px rgba(255,0,0,0.2);
         }
-        .opcion-btn { 
-            display: block; width: 100%; background: none; color: white; border: 1px solid #555; 
-            padding: 12px; margin: 10px 0; cursor: pointer; font-family: 'Courier New'; text-align: left; font-size: 14px;
-        }
+        .opcion-btn { display: block; width: 100%; background: none; color: white; border: 1px solid #555; padding: 12px; margin: 10px 0; cursor: pointer; font-family: 'Courier New'; text-align: left; }
         .opcion-btn:hover { background: #222; border-color: #00ff00; color: #00ff00; }
-
         #pantalla-final { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; color: #ff3333; padding: 50px; box-sizing: border-box; z-index: 1000; text-align: center; }
     </style>
 </head>
 <body>
+
+    <div id="menu-inicio">
+        <h1 style="font-size: 3.5em; letter-spacing: 10px; color: #ff0000;">TERROR EN CHIMBAS</h1>
+        <p style="max-width: 600px; font-size: 1.2em; line-height: 1.5;">
+            San Juan, Argentina. 2026.<br><br>
+            Sos Alejo, un empleado en una tienda de ropa de Chimbas.<br>
+            Falta poco para irte, pero los maniquíes se sienten... distintos.<br>
+            No dejes que Jony te convenza de quedarte de más.
+        </p>
+        <button id="btn-jugar">EMPEZAR TURNO</button>
+    </div>
 
     <div id="ui">
         <div id="noche-info">NOCHE 1</div>
@@ -47,9 +66,8 @@
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/PointerLockControls.js';
 
-        let noche = 1, misionPaso = 0, cajasRecogidas = 0, muerto = false, persiguiendo = false;
+        let noche = 1, misionPaso = 0, cajasRecogidas = 0, muerto = false, persiguiendo = false, iniciado = false;
         const scene = new THREE.Scene();
-        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 1.7, 13); 
 
@@ -57,10 +75,9 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- ILUMINACIÓN MEJORADA ---
+        // --- ILUMINACIÓN ---
         const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(luzAmbiental);
-
         const luzLocal = new THREE.PointLight(0xffffff, 1, 30);
         luzLocal.position.set(0, 3, 0);
         scene.add(luzLocal);
@@ -68,8 +85,8 @@
         const flashlight = new THREE.SpotLight(0xffffff, 0, 25, 0.4, 0.5);
         camera.add(flashlight);
         const lTarget = new THREE.Object3D();
-        lTarget.position.set(0, 0, -5);
         camera.add(lTarget);
+        lTarget.position.set(0, 0, -5);
         flashlight.target = lTarget;
         scene.add(camera);
 
@@ -81,58 +98,59 @@
             return m;
         }
 
-        // --- CONSTRUCCIÓN DEL LOCAL ---
-        crearCaja(26, 4, 1, 0, -16); // Pared fondo
-        crearCaja(1, 4, 32, -13, 0); // Pared izquierda
-        crearCaja(1, 4, 32, 13, 0);  // Pared derecha
+        // --- CONSTRUCCIÓN ---
+        crearCaja(26, 4, 1, 0, -16);
+        crearCaja(1, 4, 32, -13, 0);
+        crearCaja(1, 4, 32, 13, 0);
         crearCaja(11, 4, 1, -7.5, 16); 
         crearCaja(11, 4, 1, 7.5, 16);
         crearCaja(4, 1, 1, 0, 16, 0x444444); 
         
-        const puertaMarco = crearCaja(4, 3, 0.2, 0, 15.8, 0x111111, false);
-
-        // Suelo con rejilla de baldosas
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshPhongMaterial({color: 0x888888}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
         const grid = new THREE.GridHelper(40, 20, 0x000000, 0x444444);
         grid.position.y = 0.01; scene.add(grid);
+        crearCaja(4, 1.1, 2, -9, 11, 0x3d2b1f);
 
-        const mostrador = crearCaja(4, 1.1, 2, -9, 11, 0x3d2b1f);
-
-        // Estantes con Ropa
-        const coloresRopa = [0xff4444, 0x44ff44, 0x4444ff, 0xeeeeee];
         for(let i=0; i<3; i++) {
-            let zPos = 5 - (i*9);
-            crearCaja(5, 2.8, 1.2, 7, zPos, 0x222222);
-            crearCaja(5, 2.8, 1.2, -7, zPos, 0x222222);
-            
-            // Simular ropa en estantes
-            for(let r=0; r<3; r++) {
-                crearCaja(1, 0.1, 0.8, 7, zPos, 0.5 + (r*0.8), coloresRopa[r], false);
-                crearCaja(1, 0.1, 0.8, -7, zPos, 0.5 + (r*0.8), coloresRopa[3-r], false);
-            }
+            let zP = 5 - (i*9);
+            crearCaja(5, 2.8, 1.2, 7, zP, 0x222222);
+            crearCaja(5, 2.8, 1.2, -7, zP, 0x222222);
         }
 
-        // --- FUNCIÓN PARA CREAR PERSONAJES ---
+        // --- FUNCIÓN HUMANOS (CON PARTES ACCESIBLES) ---
         function crearHumanoide(colorRopa, colorPiel, esManiqui = false) {
             const grupo = new THREE.Group();
-            const matCuerpo = new THREE.MeshPhongMaterial({ color: colorRopa, shininess: esManiqui ? 100 : 10 });
-            const matPiel = new THREE.MeshPhongMaterial({ color: colorPiel });
+            const matR = new THREE.MeshPhongMaterial({ color: colorRopa, shininess: esManiqui ? 100 : 10 });
+            const matP = new THREE.MeshPhongMaterial({ color: colorPiel });
 
-            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), matCuerpo);
-            torso.position.y = 1.2; grupo.add(torso);
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), matR);
+            torso.position.y = 1.2;
+            torso.name = "torso";
 
-            const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matPiel);
-            cabeza.position.y = 1.65; cabeza.scale.y = 1.2; grupo.add(cabeza);
+            const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matP);
+            cabeza.position.y = 0.45; cabeza.scale.y = 1.2;
+            torso.add(cabeza);
 
             const brazoG = new THREE.BoxGeometry(0.12, 0.6, 0.12);
-            const bDer = new THREE.Mesh(brazoG, matPiel); bDer.position.set(0.35, 1.2, 0); grupo.add(bDer);
-            const bIzq = bDer.clone(); bIzq.position.x = -0.35; grupo.add(bIzq);
+            const bDer = new THREE.Mesh(brazoG, matP); 
+            bDer.position.set(0.35, 0, 0); bDer.name = "brazoDer";
+            torso.add(bDer);
+
+            const bIzq = bDer.clone(); 
+            bIzq.position.x = -0.35; bIzq.name = "brazoIzq";
+            torso.add(bIzq);
 
             const piernaG = new THREE.BoxGeometry(0.18, 0.8, 0.18);
-            const pDer = new THREE.Mesh(piernaG, matCuerpo); pDer.position.set(0.15, 0.4, 0); grupo.add(pDer);
-            const pIzq = pDer.clone(); pIzq.position.x = -0.15; grupo.add(pIzq);
+            const pDer = new THREE.Mesh(piernaG, matR); 
+            pDer.position.set(0.15, 0.4, 0); pDer.name = "piernaDer";
+            grupo.add(pDer);
 
+            const pIzq = pDer.clone(); 
+            pIzq.position.x = -0.15; pIzq.name = "piernaIzq";
+            grupo.add(pIzq);
+
+            grupo.add(torso);
             return grupo;
         }
 
@@ -142,13 +160,21 @@
         const maniqui = crearHumanoide(0xffffff, 0xffffff, true);
         maniqui.position.set(10, 0, -13); scene.add(maniqui);
 
-        const mEstaticoA = crearHumanoide(0xffffff, 0xffffff, true);
-        mEstaticoA.position.set(-11, 0, -14); mEstaticoA.rotation.y = Math.PI/4; scene.add(mEstaticoA);
+        // Estáticos
+        const mE1 = crearHumanoide(0xffffff, 0xffffff, true);
+        mE1.position.set(-11, 0, -14); scene.add(mE1);
+        const mE2 = crearHumanoide(0xffffff, 0xffffff, true);
+        mE2.position.set(11, 0, -14); scene.add(mE2);
 
-        const mEstaticoB = crearHumanoide(0xffffff, 0xffffff, true);
-        mEstaticoB.position.set(11, 0, -14); mEstaticoB.rotation.y = -Math.PI/4; scene.add(mEstaticoB);
+        // --- LÓGICA ---
+        const controls = new PointerLockControls(camera, document.body);
+        document.getElementById('btn-jugar').onclick = () => {
+            document.getElementById('menu-inicio').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            iniciado = true;
+            controls.lock();
+        };
 
-        // --- LÓGICA DE JUEGO ---
         const puntosSpawn = [{x: 0, z: 5}, {x: 0, z: -8}, {x: 8, z: 12}, {x: -8, z: -2}, {x: 0, z: -14}];
         const itemsMision = [];
         function spawnCajas() {
@@ -160,10 +186,6 @@
         }
         spawnCajas();
 
-        const controls = new PointerLockControls(camera, document.body);
-        document.body.addEventListener('click', () => { 
-            if(!muerto && document.getElementById('menu-dialogo').style.display !== 'block') controls.lock(); 
-        });
         const keys = {};
         document.addEventListener('keydown', (e) => keys[e.code] = true);
         document.addEventListener('keyup', (e) => keys[e.code] = false);
@@ -174,28 +196,27 @@
         }
 
         const datosDialogo = {
-            1: { pregunta: "Jony: ¡Hola Alejo! Linda noche para laburar, ¿no? No hay nadie en la calle.", opciones: [{ t: "Sí, ojalá terminemos temprano.", r: "Jony: Olvidate, hoy el jefe quiere que acomodemos todo el stock." }, { t: "¿Viste el partido ayer?", r: "Jony: ¡Qué amargo que sos! Casi me muero del embole." }] },
-            2: { pregunta: "Jony: Che, Alejo... ¿me prestás el cargador? Me quedé sin batería.", opciones: [{ t: "Lo dejé en la entrada, agarrlo.", r: "Jony: Joya, después te lo devuelvo. ¡A laburar!" }, { t: "No traje hoy, perdón.", r: "Jony: Bueno, no pasa nada. Estaré incomunicado toda la noche jaja." }] },
-            3: { pregunta: "Jony: Mañana es viernes, ¿sale ese asado en lo de Lucas?", opciones: [{ t: "De una, yo llevo la bebida.", r: "Jony: ¡Esa es la actitud! Ya le aviso por WhatsApp." }, { t: "No sé si llego con la plata.", r: "Jony: Dale che, no seas ortiva, yo te presto." }] },
-            4: { pregunta: "Jony: Alejo... escuché un ruido raro recién. Como si alguien caminara arriba.", opciones: [{ t: "Deben ser las ratas del techo.", r: "Jony: No sé... eran pasos pesados. Capaz el sereno de al lado." }, { t: "No escuché nada, estás loco.", r: "Jony: Capaz tenés razón... estoy cansado." }] },
-            5: { pregunta: "Jony: No me gusta nada esto. El maniquí blanco cambió de pose. Te juro que estaba con el brazo bajo.", opciones: [{ t: "Seguro lo movió el dueño.", r: "Jony: El dueño no vino en todo el día. Hay algo raro acá." }, { t: "Dejá de flashear, Jony.", r: "Jony: Miralo bien Alejo... parece que nos está siguiendo con la mirada." }] },
-            6: { pregunta: "Jony: Mirá, me voy. Mañana renuncio. Tengo un presentimiento horrible, Alejo. Vámonos los dos.", opciones: [{ t: "Por favor Jony, no me dejes solo la última noche. Mañana nos vamos juntos.", r: "Jony: ... (Suspirando) Está bien Alejo. Solo porque sos vos. Mañana es nuestro último turno." }, { t: "Quedate un rato más, falta poco para el aguinaldo.", r: "Jony: Tenés razón... pero si escucho un ruido más, me tomo el palo." }] }
+            1: { pregunta: "Jony: ¡Hola Alejo! Linda noche para laburar, ¿no?", opciones: [{ t: "Sí, ojalá terminemos temprano.", r: "Jony: Olvidate, hoy el jefe quiere que acomodemos todo." }, { t: "No tengo ganas hoy.", r: "Jony: Yo tampoco, pero bue..." }] },
+            2: { pregunta: "Jony: ¿Me prestás el cargador?", opciones: [{ t: "Está en la entrada.", r: "Jony: Joya, gracias." }, { t: "No traje.", r: "Jony: Uh, bajón." }] },
+            3: { pregunta: "Jony: ¿Sale asado mañana?", opciones: [{ t: "De una.", r: "Jony: ¡Esa!" }, { t: "No puedo.", r: "Jony: Que amargo." }] },
+            4: { pregunta: "Jony: Escuché pasos arriba...", opciones: [{ t: "Ratas.", r: "Jony: Pasos pesados eran..." }, { t: "Flashás.", r: "Jony: Capaz..." }] },
+            5: { pregunta: "Jony: El maniquí se movió...", opciones: [{ t: "Es el viento.", r: "Jony: No hay viento acá Alejo." }, { t: "Estás cansado.", r: "Jony: Puede ser." }] },
+            6: { pregunta: "Jony: Me voy Alejo, esto me da miedo.", opciones: [{ t: "Quedate, es la última.", r: "Jony: Bueno... solo por vos." }, { t: "No seas cagón.", r: "Jony: Tenés razón." }] }
         };
 
         function mostrarMenuDialogo(n) {
             controls.unlock();
             const menu = document.getElementById('menu-dialogo');
-            const pregunta = document.getElementById('pregunta-jony');
-            const contenedor = document.getElementById('contenedor-opciones');
-            pregunta.innerText = datosDialogo[n].pregunta;
-            contenedor.innerHTML = "";
+            menu.style.display = 'block';
+            document.getElementById('pregunta-jony').innerText = datosDialogo[n].pregunta;
+            const cont = document.getElementById('contenedor-opciones');
+            cont.innerHTML = "";
             datosDialogo[n].opciones.forEach(opc => {
                 const btn = document.createElement('button');
                 btn.className = "opcion-btn"; btn.innerText = opc.t;
                 btn.onclick = () => { menu.style.display = 'none'; decir(opc.r); misionPaso = 1; document.getElementById('objetivo').innerText = "Objetivo: Recoge las 3 cajas."; controls.lock(); };
-                contenedor.appendChild(btn);
+                cont.appendChild(btn);
             });
-            menu.style.display = 'block';
         }
 
         function setNoche(n) {
@@ -204,67 +225,61 @@
             document.getElementById('noche-info').innerText = `NOCHE ${n}`;
             document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony.";
             spawnCajas();
-            if(n === 4) maniqui.position.set(0, 0, -10);
-            if(n === 5) maniqui.position.set(10, 0, 0);
-            if(n === 6) maniqui.position.set(0, 0, 8);
             if(n === 7) {
                 luzAmbiental.intensity = 0; luzLocal.intensity = 0; flashlight.intensity = 6; 
                 scene.fog = new THREE.Fog(0x000000, 1, 10); 
                 scene.remove(jony);
-                crearCaja(0.2, 0.2, 0.8, -8.5, 9.5, 0x2244aa, false);
                 crearCaja(2, 0.01, 2, -8, 9, 0x440000, false);
-                maniqui.position.set(0, 0, -14);
-                document.getElementById('objetivo').innerText = "Objetivo: ¿Jony? ¿Estás ahí?";
-                decir("¡¿Jony?! Se cortó la luz... ¡Respondé!");
+                document.getElementById('objetivo').innerText = "Objetivo: ¿Jony?";
             }
         }
 
         function update() {
             requestAnimationFrame(update);
-            if (!controls.isLocked || muerto) return;
+            if (!iniciado || !controls.isLocked || muerto) return;
             const oldPos = camera.position.clone();
-            const speed = 0.15;
-            if(keys['KeyW']) controls.moveForward(speed);
-            if(keys['KeyS']) controls.moveForward(-speed);
-            if(keys['KeyA']) controls.moveRight(-speed);
-            if(keys['KeyD']) controls.moveRight(speed);
+            if(keys['KeyW']) controls.moveForward(0.15);
+            if(keys['KeyS']) controls.moveForward(-0.15);
+            if(keys['KeyA']) controls.moveRight(-0.15);
+            if(keys['KeyD']) controls.moveRight(0.15);
 
-            // Colisiones sencillas
             const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.6, 1.8, 0.6));
             for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
 
             const pPos = camera.position;
-
             if(noche < 7) {
                 if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) { mostrarMenuDialogo(noche); misionPaso = -1; }
                 if(misionPaso === 1) {
                     itemsMision.forEach((c, i) => {
                         if(pPos.distanceTo(c.position) < 2) {
                             scene.remove(c); itemsMision.splice(i, 1);
-                            cajasRecogidas++; decir(`Cajas recogidas: ${cajasRecogidas}/3`);
-                            if(cajasRecogidas === 3) { document.getElementById('objetivo').innerText = "Objetivo: Sal por la puerta."; misionPaso = 2; }
+                            cajasRecogidas++; decir(`Cajas: ${cajasRecogidas}/3`);
+                            if(cajasRecogidas === 3) { document.getElementById('objetivo').innerText = "Sal por la puerta."; misionPaso = 2; }
                         }
                     });
                 }
                 if(misionPaso === 2 && pPos.z > 15) setNoche(noche + 1);
             } else {
                 if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 1, 9)) < 2.5) {
-                    decir("¡NO! ¡JONY NO! ¡LO MATÓ POR MI CULPA!");
-                    misionPaso = 1; document.getElementById('objetivo').innerText = "¡CORRE A LA SALIDA!";
+                    decir("¡LO MATÓ!"); misionPaso = 1; document.getElementById('objetivo').innerText = "¡HUYE!";
                 }
                 if(misionPaso === 1) {
                     const distM = pPos.distanceTo(maniqui.position);
-                    if(distM < 12) persiguiendo = true;
+                    if(distM < 12 && !persiguiendo) {
+                        persiguiendo = true;
+                        // ANIMACIÓN A 4 PATAS (DEFORMACIÓN)
+                        maniqui.getObjectByName("torso").rotation.x = Math.PI / 2.5; // Agacha el torso
+                        maniqui.getObjectByName("torso").position.y = 0.5; // Baja al suelo
+                        maniqui.getObjectByName("brazoDer").rotation.x = -Math.PI / 2; // Estira brazos
+                        maniqui.getObjectByName("brazoIzq").rotation.x = -Math.PI / 2;
+                    }
                     if(persiguiendo) {
                         const d = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
-                        maniqui.position.addScaledVector(d, 0.16);
+                        maniqui.position.addScaledVector(d, 0.22); // Más rápido en 4 patas
                         maniqui.lookAt(pPos.x, 0, pPos.z);
                         if(distM < 1.3) { muerto = true; final(); }
                     }
-                    if(pPos.z > 15.5) { 
-                        decir("¡Logré salir!"); 
-                        location.reload(); 
-                    }
+                    if(pPos.z > 15.5) location.reload();
                 }
             }
             renderer.render(scene, camera);
@@ -273,7 +288,7 @@
         function final() {
             controls.unlock();
             document.getElementById('pantalla-final').style.display = 'block';
-            document.getElementById('noticia-texto').innerText = "CHIMBAS - El horror sacudió el local de la calle Mendoza. Jonathan fue hallado sin vida, convencido de quedarse una última noche por su compañero Alejo, quien ahora se encuentra desaparecido. Los vecinos dicen que de noche, las ropas del local parecen gritar.";
+            document.getElementById('noticia-texto').innerText = "CHIMBAS - Jonathan fue hallado sin vida. Alejo desapareció. Testigos dicen haber visto una figura blanca corriendo de forma inhumana por las calles de San Juan.";
         }
         update();
     </script>
