@@ -260,8 +260,13 @@ const maniqui = crearHumanoide(0xffffff, 0xffffff, true); // Maniquí blanco bri
             if(keys['KeyA']) controls.moveRight(-speed);
             if(keys['KeyD']) controls.moveRight(speed);
 
-            const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.6, 1.8, 0.6));
-            for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
+    // AGREGAR ROPA (Pequeños bloques de colores)
+    const colores = [0xff4444, 0x44ff44, 0x4444ff, 0xffff44];
+    for(let r=0; r<4; r++) {
+        const ropa = crearCaja(0.8, 0.1, 0.8, 7, 0.6 + (r*0.2), 5 - (i*9), colores[r], false);
+        const ropaIzq = crearCaja(0.8, 0.1, 0.8, -7, 0.6 + (r*0.2), 5 - (i*9), colores[3-r], false);
+    }
+}for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
 
             const pPos = camera.position;
 
