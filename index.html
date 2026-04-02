@@ -76,9 +76,21 @@
             return m;
         }
 
-        // Muros y estanterías
-        crearCaja(26, 4, 1, 0, 16); crearCaja(26, 4, 1, 0, -16);
-        crearCaja(1, 4, 32, -13, 0); crearCaja(1, 4, 32, 13, 0);
+        // --- CONSTRUCCIÓN DEL LOCAL ---
+        crearCaja(26, 4, 1, 0, -16); // Pared fondo
+        crearCaja(1, 4, 32, -13, 0); // Pared izquierda
+        crearCaja(1, 4, 32, 13, 0);  // Pared derecha
+        
+        // Pared frontal con hueco para puerta
+        crearCaja(11, 4, 1, -7.5, 16); 
+        crearCaja(11, 4, 1, 7.5, 16);
+        crearCaja(4, 1, 1, 0, 16, 0x444444); // Dintel (arriba de la puerta)
+        
+        // --- LA PUERTA (SALIDA) ---
+        const puertaMarco = crearCaja(4, 3, 0.2, 0, 15.8, 0x222222, false);
+        const cartelSalida = crearCaja(1.5, 0.5, 0.3, 0, 3.2, 15.9, 0x00ff00, false); // Cartel EXIT
+        cartelSalida.material.emissive = new THREE.Color(0x00ff00);
+
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshPhongMaterial({color: 0x222222}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
         const mostrador = crearCaja(4, 1.1, 2, -9, 11, 0x3d2b1f);
@@ -129,48 +141,12 @@
         }
 
         const datosDialogo = {
-            1: {
-                pregunta: "Jony: ¡Hola Alejo! Linda noche para laburar, ¿no? No hay nadie en la calle.",
-                opciones: [
-                    { t: "Sí, ojalá terminemos temprano.", r: "Jony: Olvidate, hoy el jefe quiere que acomodemos todo el stock." },
-                    { t: "¿Viste el partido ayer?", r: "Jony: ¡Qué amargo que sos! Casi me muero del embole." }
-                ]
-            },
-            2: {
-                pregunta: "Jony: Che, Alejo... ¿me prestás el cargador? Me quedé sin batería.",
-                opciones: [
-                    { t: "Lo dejé en la entrada, agarrlo.", r: "Jony: Joya, después te lo devuelvo. ¡A laburar!" },
-                    { t: "No traje hoy, perdón.", r: "Jony: Bueno, no pasa nada. Estaré incomunicado toda la noche jaja." }
-                ]
-            },
-            3: {
-                pregunta: "Jony: Mañana es viernes, ¿sale ese asado en lo de Lucas?",
-                opciones: [
-                    { t: "De una, yo llevo la bebida.", r: "Jony: ¡Esa es la actitud! Ya le aviso por WhatsApp." },
-                    { t: "No sé si llego con la plata.", r: "Jony: Dale che, no seas ortiva, yo te presto." }
-                ]
-            },
-            4: {
-                pregunta: "Jony: Alejo... escuché un ruido raro recién. Como si alguien caminara arriba.",
-                opciones: [
-                    { t: "Deben ser las ratas del techo.", r: "Jony: No sé... eran pasos pesados. Capaz el sereno de al lado." },
-                    { t: "No escuché nada, estás loco.", r: "Jony: Capaz tenés razón... estoy cansado." }
-                ]
-            },
-            5: {
-                pregunta: "Jony: No me gusta nada esto. El maniquí blanco cambió de pose. Te juro que estaba con el brazo bajo.",
-                opciones: [
-                    { t: "Seguro lo movió el dueño.", r: "Jony: El dueño no vino en todo el día. Hay algo raro acá." },
-                    { t: "Dejá de flashear, Jony.", r: "Jony: Miralo bien Alejo... parece que nos está siguiendo con la mirada." }
-                ]
-            },
-            6: {
-                pregunta: "Jony: Mirá, me voy. Mañana renuncio. Tengo un presentimiento horrible, Alejo. Vámonos los dos.",
-                opciones: [
-                    { t: "Por favor Jony, no me dejes solo la última noche. Mañana nos vamos juntos.", r: "Jony: ... (Suspirando) Está bien Alejo. Solo porque sos vos. Mañana es nuestro último turno." },
-                    { t: "Quedate un rato más, falta poco para el aguinaldo.", r: "Jony: Tenés razón... pero si escucho un ruido más, me tomo el palo." }
-                ]
-            }
+            1: { pregunta: "Jony: ¡Hola Alejo! Linda noche para laburar, ¿no? No hay nadie en la calle.", opciones: [{ t: "Sí, ojalá terminemos temprano.", r: "Jony: Olvidate, hoy el jefe quiere que acomodemos todo el stock." }, { t: "¿Viste el partido ayer?", r: "Jony: ¡Qué amargo que sos! Casi me muero del embole." }] },
+            2: { pregunta: "Jony: Che, Alejo... ¿me prestás el cargador? Me quedé sin batería.", opciones: [{ t: "Lo dejé en la entrada, agarrlo.", r: "Jony: Joya, después te lo devuelvo. ¡A laburar!" }, { t: "No traje hoy, perdón.", r: "Jony: Bueno, no pasa nada. Estaré incomunicado toda la noche jaja." }] },
+            3: { pregunta: "Jony: Mañana es viernes, ¿sale ese asado en lo de Lucas?", opciones: [{ t: "De una, yo llevo la bebida.", r: "Jony: ¡Esa es la actitud! Ya le aviso por WhatsApp." }, { t: "No sé si llego con la plata.", r: "Jony: Dale che, no seas ortiva, yo te presto." }] },
+            4: { pregunta: "Jony: Alejo... escuché un ruido raro recién. Como si alguien caminara arriba.", opciones: [{ t: "Deben ser las ratas del techo.", r: "Jony: No sé... eran pasos pesados. Capaz el sereno de al lado." }, { t: "No escuché nada, estás loco.", r: "Jony: Capaz tenés razón... estoy cansado." }] },
+            5: { pregunta: "Jony: No me gusta nada esto. El maniquí blanco cambió de pose. Te juro que estaba con el brazo bajo.", opciones: [{ t: "Seguro lo movió el dueño.", r: "Jony: El dueño no vino en todo el día. Hay algo raro acá." }, { t: "Dejá de flashear, Jony.", r: "Jony: Miralo bien Alejo... parece que nos está siguiendo con la mirada." }] },
+            6: { pregunta: "Jony: Mirá, me voy. Mañana renuncio. Tengo un presentimiento horrible, Alejo. Vámonos los dos.", opciones: [{ t: "Por favor Jony, no me dejes solo la última noche. Mañana nos vamos juntos.", r: "Jony: ... (Suspirando) Está bien Alejo. Solo porque sos vos. Mañana es nuestro último turno." }, { t: "Quedate un rato más, falta poco para el aguinaldo.", r: "Jony: Tenés razón... pero si escucho un ruido más, me tomo el palo." }] }
         };
 
         function mostrarMenuDialogo(n) {
@@ -178,21 +154,12 @@
             const menu = document.getElementById('menu-dialogo');
             const pregunta = document.getElementById('pregunta-jony');
             const contenedor = document.getElementById('contenedor-opciones');
-            
             pregunta.innerText = datosDialogo[n].pregunta;
             contenedor.innerHTML = "";
-            
             datosDialogo[n].opciones.forEach(opc => {
                 const btn = document.createElement('button');
-                btn.className = "opcion-btn";
-                btn.innerText = opc.t;
-                btn.onclick = () => {
-                    menu.style.display = 'none';
-                    decir(opc.r);
-                    misionPaso = 1;
-                    document.getElementById('objetivo').innerText = "Objetivo: Recoge las 3 cajas.";
-                    controls.lock();
-                };
+                btn.className = "opcion-btn"; btn.innerText = opc.t;
+                btn.onclick = () => { menu.style.display = 'none'; decir(opc.r); misionPaso = 1; document.getElementById('objetivo').innerText = "Objetivo: Recoge las 3 cajas."; controls.lock(); };
                 contenedor.appendChild(btn);
             });
             menu.style.display = 'block';
@@ -204,18 +171,13 @@
             document.getElementById('noche-info').innerText = `NOCHE ${n}`;
             document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony.";
             spawnCajas();
-
-            // El maniquí se acerca poco a poco a partir de la noche 4
             if(n === 4) maniqui.position.set(0, 1.8, -10);
             if(n === 5) maniqui.position.set(10, 1.8, 0);
             if(n === 6) maniqui.position.set(0, 1.8, 8);
-            
             if(n === 7) {
-                luzLocal.intensity = 0; 
-                flashlight.intensity = 6; 
+                luzLocal.intensity = 0; flashlight.intensity = 6; 
                 scene.fog = new THREE.Fog(0x000000, 1, 10); 
                 scene.remove(jony);
-                // Escena del crimen
                 crearCaja(0.2, 0.2, 0.8, -8.5, 9.5, 0x2244aa, false);
                 crearCaja(0.2, 0.6, 0.2, -7.5, 9, 0xffdbac, false);
                 crearCaja(2, 0.01, 2, -8, 9, 0x440000, false);
@@ -241,28 +203,21 @@
             const pPos = camera.position;
 
             if(noche < 7) {
-                if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) {
-                    mostrarMenuDialogo(noche);
-                    misionPaso = -1;
-                }
+                if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) { mostrarMenuDialogo(noche); misionPaso = -1; }
                 if(misionPaso === 1) {
                     itemsMision.forEach((c, i) => {
                         if(pPos.distanceTo(c.position) < 2) {
                             scene.remove(c); itemsMision.splice(i, 1);
                             cajasRecogidas++; decir(`Cajas recogidas: ${cajasRecogidas}/3`);
-                            if(cajasRecogidas === 3) {
-                                document.getElementById('objetivo').innerText = "Objetivo: Sal por la puerta.";
-                                misionPaso = 2;
-                            }
+                            if(cajasRecogidas === 3) { document.getElementById('objetivo').innerText = "Objetivo: Sal por la puerta."; misionPaso = 2; }
                         }
                     });
                 }
-                if(misionPaso === 2 && pPos.z > 14) setNoche(noche + 1);
+                if(misionPaso === 2 && pPos.z > 15) setNoche(noche + 1);
             } else {
-                // NOCHE 7 FINAL
                 if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 1, 9)) < 2.5) {
                     decir("¡NO! ¡JONY NO! ¡LO MATÓ POR MI CULPA!");
-                    misionPaso = 1; document.getElementById('objetivo').innerText = "¡HUYE!";
+                    misionPaso = 1; document.getElementById('objetivo').innerText = "¡CORRE A LA SALIDA!";
                 }
                 if(misionPaso === 1) {
                     const distM = pPos.distanceTo(maniqui.position);
@@ -270,9 +225,14 @@
                     if(persiguiendo) {
                         maniqui.position.x += (Math.random() - 0.5) * 0.15;
                         const d = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
-                        maniqui.position.addScaledVector(d, 0.16); // Un poco más rápido al final
+                        maniqui.position.addScaledVector(d, 0.16);
                         maniqui.lookAt(pPos.x, 1.8, pPos.z);
                         if(distM < 1.3) { muerto = true; final(); }
+                    }
+                    if(pPos.z > 15.5) { 
+                        // GANASTE? (O escapaste)
+                        decir("¡Logré salir!"); 
+                        location.reload(); 
                     }
                 }
             }
