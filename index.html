@@ -2,356 +2,258 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Almacén de Chimbas - 5 Noches</title>
+    <title>Almacén de Chimbas - V2</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Courier New', Courier, monospace; background-color: black; color: white; }
+        body { margin: 0; overflow: hidden; font-family: sans-serif; background-color: black; color: white; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        #contador-noche { position: absolute; top: 20px; left: 20px; font-size: 24px; font-weight: bold; text-shadow: 2px 2px 0 #000; }
-        #tareas { position: absolute; top: 60px; left: 20px; font-size: 18px; color: #ffcc00; text-shadow: 1px 1px 0 #000; }
-        
-        /* Menú interactivo de Jony */
-        #menu-dialogo { display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 80%; background: rgba(0, 0, 0, 0.8); border: 2px solid white; padding: 20px; pointer-events: auto; text-align: center; }
-        #texto-dialogo { font-size: 20px; margin-bottom: 20px; }
-        .opcion-btn { background: #333; color: white; border: 1px solid white; padding: 10px 20px; margin: 5px; cursor: pointer; font-family: inherit; font-size: 16px; transition: 0.2s; }
-        .opcion-btn:hover { background: #555; }
-        
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; background: rgba(255,255,255,0.5); transform: translate(-50%, -50%); border-radius: 50%; }
-        #start-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: black; display: flex; align-items: center; justify-content: center; z-index: 10; pointer-events: auto; }
-        #start-btn { font-size: 24px; padding: 15px 30px; cursor: pointer; background: darkred; color: white; border: none; }
+        #contador-noche { position: absolute; top: 20px; left: 20px; font-size: 24px; font-weight: bold; }
+        #tareas { position: absolute; top: 60px; left: 20px; font-size: 18px; color: #ffcc00; }
+        #menu-dialogo { display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 80%; background: rgba(0, 0, 0, 0.9); border: 2px solid #fff; padding: 20px; pointer-events: auto; text-align: center; }
+        .opcion-btn { background: #444; color: white; border: 1px solid white; padding: 10px; margin: 5px; cursor: pointer; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: white; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.5; }
+        #instrucciones { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <div id="start-screen">
-        <button id="start-btn">Entrar al Almacén</button>
+    <div id="instrucciones">
+        <h1>Almacén de Chimbas</h1>
+        <p>W,A,S,D para moverte | SHIFT para agacharte | ESPACIO para saltar</p>
+        <p>Click para interactuar con Jony o agarrar cajas</p>
+        <button id="btn-jugar" style="padding: 10px 20px; cursor: pointer;">JUGAR</button>
     </div>
 
     <div id="ui-layer">
         <div id="contador-noche">Noche: 1 / 5</div>
-        <div id="tareas">Tarea: Ve a hablar con Jony al mostrador</div>
+        <div id="tareas">Tarea: Habla con Jony en el mostrador</div>
         <div id="crosshair"></div>
     </div>
 
     <div id="menu-dialogo">
-        <div id="texto-dialogo">¿Qué onda? ¿Listo para el turno? Ojo con el sótano...</div>
-        <div id="opciones-container">
-            </div>
+        <div id="texto-dialogo"></div>
+        <div id="opciones"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 
     <script>
-        // Variables principales del juego
+        let scene, camera, renderer, controls;
         let nocheActual = 1;
-        let estadoTarea = "hablar_jony";
-        let objetosRecolectados = 0;
-        let rastroSangre = [];
+        let cajasEncontradas = 0;
+        let objetosInteractuables = [];
+        let colisionables = [];
+        let lucesTecho = [];
+        let jony, maniqui;
 
-        // Configuración de Three.js
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050505, 0.05);
-        scene.background = new THREE.Color(0x050505);
-        
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.body.appendChild(renderer.domElement);
+        const clock = new THREE.Clock();
 
-        const controls = new THREE.PointerLockControls(camera, document.body);
+        init();
 
-        // UI Elements
-        const uiContador = document.getElementById('contador-noche');
-        const uiTareas = document.getElementById('tareas');
-        const menuDialogo = document.getElementById('menu-dialogo');
-        const textoDialogo = document.getElementById('texto-dialogo');
-        const opcionesContainer = document.getElementById('opciones-container');
-
-        // Movimiento y Físicas Básicas
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        let canJump = false;
-        let isCrouching = false;
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
-
-        // Entidades
-        let jony, maniquiBlanco, mostrador;
-
-        initGame();
-
-        function initGame() {
-            construirAlmacen();
-            crearJony();
-            crearManiqui();
-            agregarLuces();
-
-            document.getElementById('start-btn').addEventListener('click', function () {
-                controls.lock();
-                document.getElementById('start-screen').style.display = 'none';
-            });
-
-            // Controles de teclado
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            // Interacción (Click izquierdo)
-            document.addEventListener('mousedown', interactuar);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
 
-            camera.position.set(0, 2, 10);
+            controls = new THREE.PointerLockControls(camera, document.body);
+
+            document.getElementById('btn-jugar').onclick = () => {
+                controls.lock();
+                document.getElementById('instrucciones').style.display = 'none';
+            };
+
+            crearAmbiente();
+            crearLuces();
+            crearPersonajes();
             animate();
+
+            document.addEventListener('mousedown', interactuar);
         }
 
-        function construirAlmacen() {
-            // Piso
-            const floorGeo = new THREE.PlaneGeometry(50, 50);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+        function crearAmbiente() {
+            // Suelo
+            const suelo = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+            suelo.rotation.x = -Math.PI / 2;
+            scene.add(suelo);
 
-            // Mostrador
-            const mostradorGeo = new THREE.BoxGeometry(4, 1.2, 1);
-            const mostradorMat = new THREE.MeshStandardMaterial({ color: 0x4a3b2c });
-            mostrador = new THREE.Mesh(mostradorGeo, mostradorMat);
-            mostrador.position.set(0, 0.6, 0);
+            // Mostrador (Con Colisión)
+            const mostrador = new THREE.Mesh(new THREE.BoxGeometry(4, 1.2, 1.5), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
+            mostrador.position.set(0, 0.6, -2);
             scene.add(mostrador);
+            colisionables.push(mostrador);
 
-            // Alacenas
-            const alacenaGeo = new THREE.BoxGeometry(1, 4, 10);
-            const alacenaMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-            const alacena1 = new THREE.Mesh(alacenaGeo, alacenaMat);
-            alacena1.position.set(-8, 2, 0);
-            scene.add(alacena1);
+            // Alacenas laterales
+            for(let i = 0; i < 3; i++) {
+                const alacena = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 3), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+                alacena.position.set(-8, 2, i * 5 - 5);
+                scene.add(alacena);
+                colisionables.push(alacena);
+            }
         }
 
-        function crearJony() {
-            const jonyGeo = new THREE.BoxGeometry(1, 2, 1);
-            const jonyMat = new THREE.MeshStandardMaterial({ color: 0x0000ff }); // Jony Azul
-            jony = new THREE.Mesh(jonyGeo, jonyMat);
-            jony.position.set(0, 1, -1.5);
-            jony.castShadow = true;
-            scene.add(jony);
-        }
+        function crearLuces() {
+            // Luz ambiental base (siempre hay un poquito de luz)
+            const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambient);
 
-        function crearManiqui() {
-            const maniquiGeo = new THREE.BoxGeometry(1.2, 2.5, 1.2); // Más grande que Jony
-            const maniquiMat = new THREE.MeshStandardMaterial({ color: 0xffffff }); // Blanco puro
-            maniquiBlanco = new THREE.Mesh(maniquiGeo, maniquiMat);
-            maniquiBlanco.position.set(-10, 1.25, -10);
-            maniquiBlanco.castShadow = true;
-            maniquiBlanco.visible = false; // Se hace visible en ciertas noches
-            scene.add(maniquiBlanco);
-        }
+            // Luces de techo (Se apagan en la Noche 5)
+            const luz1 = new THREE.PointLight(0xffffff, 1, 20);
+            luz1.position.set(0, 5, 0);
+            scene.add(luz1);
+            lucesTecho.push(luz1);
 
-        function agregarLuces() {
-            const ambientLight = new THREE.AmbientLight(0x202020);
-            scene.add(ambientLight);
+            const luz2 = new THREE.PointLight(0xffffff, 0.8, 20);
+            luz2.position.set(0, 5, -10);
+            scene.add(luz2);
+            lucesTecho.push(luz2);
 
-            // Luz linterna del jugador
-            const linterna = new THREE.SpotLight(0xffffff, 1);
-            linterna.distance = 20;
-            linterna.angle = Math.PI / 6;
-            linterna.penumbra = 0.5;
+            // Linterna del jugador (empieza apagada o muy tenue)
+            const linterna = new THREE.SpotLight(0xffffff, 1, 15, Math.PI/6);
             camera.add(linterna);
-            linterna.position.set(0, 0, 1);
-            linterna.target.position.set(0, 0, -1);
+            linterna.position.set(0,0,0);
+            linterna.target.position.set(0,0,-1);
             camera.add(linterna.target);
             scene.add(camera);
-
-            // Luz tenue mostrador
-            const luzMostrador = new THREE.PointLight(0xffcc00, 0.8, 10);
-            luzMostrador.position.set(0, 3, 0);
-            scene.add(luzMostrador);
         }
 
-        // Sistema de Diálogos Interactivo
-        function interactuar() {
-            if (controls.isLocked) {
-                // Raycaster para ver si miramos a Jony
-                const raycaster = new THREE.Raycaster(camera.position, camera.getWorldDirection(new THREE.Vector3()));
-                const intersects = raycaster.intersectObject(jony);
+        function crearPersonajes() {
+            // Jony
+            const jonyGeo = new THREE.BoxGeometry(0.8, 1.8, 0.5);
+            jony = new THREE.Mesh(jonyGeo, new THREE.MeshStandardMaterial({ color: 0x0000ff }));
+            jony.position.set(0, 0.9, -3.5); // Detrás del mostrador
+            scene.add(jony);
 
-                if (intersects.length > 0 && intersects[0].distance < 4 && nocheActual < 5) {
-                    controls.unlock();
-                    abrirMenuJony();
+            // Maniquí (Oculto al inicio)
+            maniqui = new THREE.Mesh(new THREE.BoxGeometry(1, 2.2, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            maniqui.position.set(-15, 1.1, -15);
+            maniqui.visible = false;
+            scene.add(maniqui);
+        }
+
+        function aparecerCajas() {
+            for(let i = 0; i < 3; i++) {
+                const caja = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+                caja.position.set(-7, 0.25, i * 4 - 4);
+                caja.name = "caja_roja";
+                scene.add(caja);
+                objetosInteractuables.push(caja);
+            }
+        }
+
+        function interactuar() {
+            if (!controls.isLocked) return;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera({x: 0, y: 0}, camera);
+            
+            // Interactuar con Jony
+            const interJony = raycaster.intersectObject(jony);
+            if (interJony.length > 0 && interJony[0].distance < 3) {
+                abrirMenuDialogo();
+            }
+
+            // Recoger cajas
+            const interCajas = raycaster.intersectObjects(objetosInteractuables);
+            if (interCajas.length > 0 && interCajas[0].distance < 3) {
+                const obj = interCajas[0].object;
+                if (obj.name === "caja_roja") {
+                    scene.remove(obj);
+                    cajasEncontradas++;
+                    document.getElementById('tareas').innerText = `Tarea: Cajas ${cajasEncontradas}/3`;
+                    if (cajasEncontradas === 3) {
+                        document.getElementById('tareas').innerText = "Tarea: Vuelve con Jony";
+                    }
                 }
             }
         }
 
-        function abrirMenuJony() {
-            menuDialogo.style.display = 'block';
-            opcionesContainer.innerHTML = '';
+        function abrirMenuDialogo() {
+            controls.unlock();
+            const menu = document.getElementById('menu-dialogo');
+            const texto = document.getElementById('texto-dialogo');
+            const opciones = document.getElementById('opciones');
+            menu.style.display = 'block';
+            opciones.innerHTML = '';
 
-            if (nocheActual === 1) {
-                textoDialogo.innerText = "Jony: Che, andá a buscar unas cajas rojas atrás de las alacenas. Cuidado con ese maniquí blanco, da mala espina.";
-                crearBoton("Aceptar misión", () => {
-                    cerrarMenu();
-                    estadoTarea = "buscar_cajas";
-                    uiTareas.innerText = "Tarea: Busca 3 cajas rojas cerca del sótano";
-                });
-            } else if (nocheActual === 4) {
-                textoDialogo.innerText = "Jony: Esto está mal... el maniquí se movió. Tené cuidado.";
-                crearBoton("Terminar turno", () => {
-                    cerrarMenu();
-                    avanzarNoche();
-                });
-            } else {
-                textoDialogo.innerText = "Jony: Dale, terminá tus tareas rápido así nos vamos.";
-                crearBoton("Ya voy", cerrarMenu);
-                crearBoton("Avanzar a la siguiente noche (Debug)", () => {
-                    cerrarMenu();
-                    avanzarNoche();
-                });
+            if (nocheActual < 5) {
+                texto.innerText = "Jony: ¿Qué hacés Alejo? Che, buscame las 3 cajas rojas que están por las alacenas.";
+                const btn = document.createElement('button');
+                btn.innerText = "Dale, yo las busco";
+                btn.className = "opcion-btn";
+                btn.onclick = () => {
+                    menu.style.display = 'none';
+                    controls.lock();
+                    aparecerCajas();
+                    document.getElementById('tareas').innerText = "Tarea: Busca 3 cajas rojas";
+                };
+                opciones.appendChild(btn);
+
+                const btnNoche = document.createElement('button');
+                btnNoche.innerText = "[DEBUG] Siguiente Noche";
+                btnNoche.onclick = saltarNoche;
+                opciones.appendChild(btnNoche);
             }
         }
 
-        function crearBoton(texto, accion) {
-            const btn = document.createElement('button');
-            btn.className = 'opcion-btn';
-            btn.innerText = texto;
-            btn.onclick = accion;
-            opcionesContainer.appendChild(btn);
-        }
-
-        function cerrarMenu() {
-            menuDialogo.style.display = 'none';
-            controls.lock();
-        }
-
-        function avanzarNoche() {
+        function saltarNoche() {
             nocheActual++;
-            uiContador.innerText = `Noche: ${nocheActual} / 5`;
-            
-            if (nocheActual === 2) {
-                maniquiBlanco.visible = true;
-                maniquiBlanco.position.set(-8, 1.25, 2); // Se acerca
-                uiTareas.innerText = "Tarea: Revisa las alacenas. ¡No lo mires fijamente!";
-            }
-            
+            document.getElementById('contador-noche').innerText = `Noche: ${nocheActual} / 5`;
+            document.getElementById('menu-dialogo').style.display = 'none';
+            controls.lock();
+
             if (nocheActual === 5) {
-                eventoTerrorFinal();
+                // APAGÓN
+                lucesTecho.forEach(l => l.intensity = 0);
+                scene.remove(jony);
+                maniqui.visible = true;
+                maniqui.position.set(0, 1.1, -1.5); // Aparece donde estaba Jony
+                document.getElementById('tareas').innerText = "Tarea: ESCAPA DEL ALMACÉN";
+                document.getElementById('tareas').style.color = "red";
             }
         }
 
-        function eventoTerrorFinal() {
-            // Noche 5: Terror puro
-            uiTareas.innerText = "Tarea: ¿Dónde está Jony?";
-            uiTareas.style.color = "red";
-            
-            // Jony desaparece
-            scene.remove(jony);
-            
-            // Rastro de sangre desde el mostrador hacia el sótano
-            for(let i=0; i<5; i++) {
-                const sangreGeo = new THREE.CircleGeometry(0.3, 8);
-                const sangreMat = new THREE.MeshBasicMaterial({ color: 0x880000 });
-                const gota = new THREE.Mesh(sangreGeo, sangreMat);
-                gota.rotation.x = -Math.PI / 2;
-                gota.position.set(0, 0.01, -2 - (i*2));
-                scene.add(gota);
-            }
+        // Lógica de Movimiento y Colisión
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyW') moveForward = true;
+            if (e.code === 'KeyS') moveBackward = true;
+            if (e.code === 'KeyA') moveLeft = true;
+            if (e.code === 'KeyD') moveRight = true;
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyW') moveForward = false;
+            if (e.code === 'KeyS') moveBackward = false;
+            if (e.code === 'KeyA') moveLeft = false;
+            if (e.code === 'KeyD') moveRight = false;
+        });
 
-            // El maniquí te persigue activamente o se planta en el mostrador
-            maniquiBlanco.position.set(0, 1.25, -1.5);
-            scene.fog.density = 0.1; // Niebla más densa
-        }
-
-        // Controles y físicas
-        function onKeyDown(event) {
-            switch (event.code) {
-                case 'ArrowUp':
-                case 'KeyW': moveForward = true; break;
-                case 'ArrowLeft':
-                case 'KeyA': moveLeft = true; break;
-                case 'ArrowDown':
-                case 'KeyS': moveBackward = true; break;
-                case 'ArrowRight':
-                case 'KeyD': moveRight = true; break;
-                case 'Space': 
-                    if (canJump) velocity.y += 10;
-                    canJump = false;
-                    break;
-                case 'ShiftLeft':
-                case 'KeyC':
-                    isCrouching = true;
-                    camera.position.y = 1.0; // Agacharse
-                    break;
-            }
-        }
-
-        function onKeyUp(event) {
-            switch (event.code) {
-                case 'ArrowUp':
-                case 'KeyW': moveForward = false; break;
-                case 'ArrowLeft':
-                case 'KeyA': moveLeft = false; break;
-                case 'ArrowDown':
-                case 'KeyS': moveBackward = false; break;
-                case 'ArrowRight':
-                case 'KeyD': moveRight = false; break;
-                case 'ShiftLeft':
-                case 'KeyC':
-                    isCrouching = false;
-                    camera.position.y = 2.0; // Levantarse
-                    break;
-            }
-        }
-
-        // Loop principal
-        let prevTime = performance.now();
         function animate() {
             requestAnimationFrame(animate);
+            
+            if (controls.isLocked) {
+                const delta = clock.getDelta();
+                const v = 5 * delta;
 
-            if (controls.isLocked === true) {
-                const time = performance.now();
-                const delta = (time - prevTime) / 1000;
+                // Guardar posición anterior para colisión
+                const oldPos = camera.position.clone();
 
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 3.0 * delta; // Gravedad
+                if (moveForward) controls.moveForward(v);
+                if (moveBackward) controls.moveForward(-v);
+                if (moveLeft) controls.moveRight(-v);
+                if (moveRight) controls.moveRight(v);
 
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
-
-                const speed = isCrouching ? 20.0 : 40.0;
-
-                if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
-
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-
-                controls.getObject().position.y += (velocity.y * delta);
-
-                if (controls.getObject().position.y < (isCrouching ? 1.0 : 2.0)) {
-                    velocity.y = 0;
-                    controls.getObject().position.y = isCrouching ? 1.0 : 2.0;
-                    canJump = true;
+                // Check Colisión simple (distancia a objetos colisionables)
+                for (let obj of colisionables) {
+                    if (camera.position.distanceTo(obj.position) < 1.5) {
+                        camera.position.copy(oldPos);
+                    }
                 }
-
-                // Logica de Maniquí que te mira (LookAt)
-                if (nocheActual >= 2 && maniquiBlanco) {
-                    // Solo te mira, se queda quieto (estilo weeping angel o perturbador)
-                    maniquiBlanco.lookAt(camera.position);
-                    maniquiBlanco.rotation.x = 0; // Evita que se incline
-                    maniquiBlanco.rotation.z = 0;
-                }
-
-                prevTime = time;
             }
-
             renderer.render(scene, camera);
-        }
-
-        // Ajuste de ventana
-        window.addEventListener('resize', onWindowResize, false);
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
         }
     </script>
 </body>
