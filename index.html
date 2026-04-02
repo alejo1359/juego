@@ -5,208 +5,314 @@
     <title>Terror en Chimbas: El Turno de Alejo</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
-        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 10; text-shadow: 2px 2px black; display: none; }
-        #objetivo { position: absolute; bottom: 30px; left: 30px; font-size: 18px; background: rgba(0,0,0,0.8); padding: 15px; border-left: 4px solid #00ff00; }
-        #subtitulos { position: absolute; bottom: 100px; width: 100%; text-align: center; font-size: 20px; color: #ffff00; padding: 0 50px; }
-        #noche-info { position: absolute; top: 30px; right: 30px; font-size: 24px; color: #ff0000; font-weight: bold; }
         
+        /* INTERFAZ DE USUARIO */
+        #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 10; display: none; }
+        #objetivo { position: absolute; bottom: 40px; left: 40px; font-size: 20px; background: rgba(0,0,0,0.8); padding: 20px; border-left: 5px solid #ff0000; letter-spacing: 1px; }
+        #subtitulos { position: absolute; bottom: 120px; width: 100%; text-align: center; font-size: 24px; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); font-style: italic; }
+        #noche-display { position: absolute; top: 40px; right: 40px; font-size: 28px; color: #ff0000; font-weight: bold; text-transform: uppercase; }
+
+        /* MENÚ PRINCIPAL */
         #menu-inicio { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: radial-gradient(circle, #220000 0%, #000000 100%);
-            color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; text-align: center;
+            background: radial-gradient(circle, #1a0000 0%, #000 100%);
+            color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; 
         }
+        .titulo-juego { font-size: 5em; color: #ff0000; margin: 0; text-shadow: 0 0 20px #ff0000; letter-spacing: 15px; animation: parpadeo 3s infinite; }
+        .historia { max-width: 700px; text-align: center; line-height: 1.8; font-size: 1.1em; color: #ccc; margin: 30px 0; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 20px; }
         #btn-jugar { 
-            padding: 15px 40px; font-size: 22px; background: #ff0000; color: white; border: none; cursor: pointer; 
-            font-family: 'Courier New'; margin-top: 20px; box-shadow: 0 0 15px red; pointer-events: auto;
+            padding: 20px 60px; font-size: 24px; background: transparent; color: #ff0000; border: 2px solid #ff0000; cursor: pointer; 
+            transition: 0.3s; font-family: 'Courier New'; font-weight: bold;
         }
-        #btn-jugar:hover { background: #aa0000; scale: 1.1; }
+        #btn-jugar:hover { background: #ff0000; color: #000; box-shadow: 0 0 30px #ff0000; transform: scale(1.05); }
 
-        #menu-dialogo { 
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95); border: 2px solid white; padding: 20px; z-index: 2000; color: white;
-            pointer-events: auto; width: 450px;
+        /* PANTALLA DE MUERTE */
+        #muerte { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; color: #ff0000; text-align: center; padding-top: 20%; }
+
+        @keyframes parpadeo {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+            52% { opacity: 0.2; }
+            54% { opacity: 0.9; }
         }
-        .opcion-btn { display: block; width: 100%; background: none; color: white; border: 1px solid #555; padding: 12px; margin: 10px 0; cursor: pointer; font-family: 'Courier New'; }
-        #pantalla-final { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; color: #ff3333; padding: 50px; z-index: 10000; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="menu-inicio">
-        <h1 style="font-size: 3.5em; color: #ff0000; margin-bottom: 10px;">TERROR EN CHIMBAS</h1>
-        <p style="max-width: 600px; font-size: 1.2em;">San Juan, Argentina. Sos Alejo, empleado de una tienda.<br>Terminá tu turno... si podés.</p>
-        <button id="btn-jugar">EMPEZAR TURNO</button>
+        <h1 class="titulo-juego">CHIMBAS</h1>
+        <p class="historia">
+            <b>SAN JUAN, ARGENTINA. 2026.</b><br>
+            Sos Alejo. Trabajás en una de las tiendas de ropa más viejas de la zona.<br>
+            Tu compañero Jony dice que los maniquíes se mueven de noche.<br>
+            Vos pensás que es el cansancio... hasta hoy.
+        </p>
+        <button id="btn-jugar">INICIAR TURNO</button>
     </div>
 
     <div id="ui">
-        <div id="noche-info">NOCHE 1</div>
-        <div id="objetivo">Objetivo: Habla con Jony.</div>
+        <div id="noche-display">Noche 1</div>
+        <div id="objetivo">Hablá con Jony cerca del mostrador.</div>
         <div id="subtitulos"></div>
     </div>
 
-    <div id="menu-dialogo"><p id="pregunta-jony"></p><div id="contenedor-opciones"></div></div>
-    <div id="pantalla-final"><h1 id="noticia-titulo">DIARIO DE CUYO</h1><div id="noticia-texto"></div><button onclick="location.reload()" style="background:red; color:white; padding:10px; border:none; cursor:pointer;">REINTENTAR</button></div>
+    <div id="muerte">
+        <h1 style="font-size: 4em;">TE ENCONTRÓ</h1>
+        <p id="cronica-txt" style="font-size: 1.5em; max-width: 800px; margin: 20px auto; color: #eee;"></p>
+        <button onclick="location.reload()" style="background:none; border: 1px solid red; color:red; padding: 10px 40px; cursor:pointer;">REINTENTAR</button>
+    </div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
         import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/PointerLockControls.js';
 
-        let noche = 1, misionPaso = 0, cajasRecogidas = 0, muerto = false, persiguiendo = false, iniciado = false;
+        // --- VARIABLES DE ESTADO ---
+        let noche = 1, misionPaso = 0, cajas = 0, muerto = false, persiguiendo = false, iniciado = false;
+        let clock = new THREE.Clock();
+
+        // --- ESCENA Y CÁMARA ---
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020202);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // --- LUCES ---
-        const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.4); scene.add(luzAmbiental);
-        const luzLocal = new THREE.PointLight(0xffffff, 1, 30); luzLocal.position.set(0, 3, 0); scene.add(luzLocal);
-        const flashlight = new THREE.SpotLight(0xffffff, 0, 25, 0.4, 0.5);
-        camera.add(flashlight); camera.add(flashlight.target); flashlight.target.position.set(0,0,-5);
+        // --- ILUMINACIÓN ATMOSFÉRICA ---
+        const ambLight = new THREE.AmbientLight(0xffffff, 0.05); scene.add(ambLight);
+        const flashLight = new THREE.SpotLight(0xffffff, 1.5, 20, 0.35, 0.5, 1);
+        flashLight.castShadow = true;
+        camera.add(flashLight);
+        camera.add(flashLight.target);
+        flashLight.target.position.set(0, 0, -5);
         scene.add(camera);
 
-        // --- MUNDO ---
+        // --- CONSTRUCCIÓN DEL LOCAL ---
         const colisionables = [];
-        function crearCaja(w, h, d, x, z, color = 0x444444, col = true) {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshPhongMaterial({color}));
-            m.position.set(x, h/2, z); scene.add(m);
-            if(col) colisionables.push(new THREE.Box3().setFromObject(m));
+        function obj(w, h, d, x, z, color = 0x333333) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshPhongMaterial({ color });
+            const m = new THREE.Mesh(geo, mat);
+            m.position.set(x, h/2, z);
+            m.receiveShadow = true; m.castShadow = true;
+            scene.add(m);
+            colisionables.push(new THREE.Box3().setFromObject(m));
             return m;
         }
-        crearCaja(26, 4, 1, 0, -16); crearCaja(1, 4, 32, -13, 0); crearCaja(1, 4, 32, 13, 0);
-        crearCaja(11, 4, 1, -7.5, 16); crearCaja(11, 4, 1, 7.5, 16);
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshPhongMaterial({color: 0x222222}));
-        floor.rotation.x = -Math.PI/2; scene.add(floor);
 
-        // --- HUMANOS ---
-        function crearHumanoide(colorRopa, colorPiel) {
-            const grupo = new THREE.Group();
-            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), new THREE.MeshPhongMaterial({color: colorRopa}));
-            torso.name = "torso"; torso.position.y = 1.2;
-            const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshPhongMaterial({color: colorPiel}));
-            cabeza.position.y = 0.45; torso.add(cabeza);
-            const bDer = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.12), new THREE.MeshPhongMaterial({color: colorPiel}));
-            bDer.name = "brazoDer"; bDer.position.set(0.35, 0, 0); torso.add(bDer);
-            const bIzq = bDer.clone(); bIzq.name = "brazoIzq"; bIzq.position.x = -0.35; torso.add(bIzq);
-            grupo.add(torso);
-            const pDer = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.8, 0.18), new THREE.MeshPhongMaterial({color: colorRopa}));
-            pDer.position.set(0.15, 0.4, 0); grupo.add(pDer);
-            const pIzq = pDer.clone(); pIzq.position.x = -0.15; grupo.add(pIzq);
-            return grupo;
+        // Paredes
+        obj(30, 6, 1, 0, -15); // Fondo
+        obj(1, 6, 30, -15, 0); // Izq
+        obj(1, 6, 30, 15, 0);  // Der
+        obj(12, 6, 1, -9, 15); // Frontal Izq
+        obj(12, 6, 1, 9, 15);  // Frontal Der
+        
+        // Suelo
+        const floorGeo = new THREE.PlaneGeometry(50, 50);
+        const floorMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI/2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // Estanterías y Mostrador
+        obj(5, 3, 1, 8, -5, 0x222222); 
+        obj(5, 3, 1, -8, -5, 0x222222);
+        const mostrador = obj(4, 1.2, 2, -10, 10, 0x442211);
+
+        // --- PERSONAJES ---
+        function crearEntidad(colorRopa, colorPiel, esManiqui = false) {
+            const g = new THREE.Group();
+            const matR = new THREE.MeshPhongMaterial({ color: colorRopa });
+            const matP = new THREE.MeshPhongMaterial({ color: colorPiel });
+            
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), matR);
+            torso.name = "torso"; torso.position.y = 1.3; g.add(torso);
+            
+            const cab = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), matP);
+            cab.name = "cabeza"; cab.position.y = 0.55; torso.add(cab);
+            
+            const brazoG = new THREE.BoxGeometry(0.15, 0.7, 0.15);
+            const bD = new THREE.Mesh(brazoG, matP); bD.name = "brazoD"; bD.position.set(0.4, 0, 0); torso.add(bD);
+            const bI = bD.clone(); bI.name = "brazoI"; bI.position.x = -0.4; torso.add(bI);
+            
+            const piernaG = new THREE.BoxGeometry(0.2, 0.9, 0.2);
+            const pD = new THREE.Mesh(piernaG, matR); pD.name = "piernaD"; pD.position.set(0.18, 0.45, 0); g.add(pD);
+            const pI = pD.clone(); pI.name = "piernaI"; pI.position.x = -0.18; g.add(pI);
+            
+            return g;
         }
 
-        const jony = crearHumanoide(0x2244aa, 0xffdbac); jony.position.set(-8, 0, 9); scene.add(jony);
-        const maniqui = crearHumanoide(0xeeeeee, 0xeeeeee); maniqui.position.set(10, 0, -13); scene.add(maniqui);
+        const jony = crearEntidad(0x113366, 0xffdbac);
+        jony.position.set(-10, 0, 8);
+        scene.add(jony);
 
-        // --- LÓGICA DE INICIO ---
+        const maniqui = crearEntidad(0xdddddd, 0xdddddd);
+        maniqui.position.set(10, 0, -10);
+        scene.add(maniqui);
+
+        // --- OBJETOS DE MISIÓN ---
+        const cajasMision = [];
+        function colocarCajas() {
+            cajasMision.forEach(c => scene.remove(c));
+            cajasMision.length = 0;
+            for(let i=0; i<3; i++) {
+                const c = obj(0.8, 0.8, 0.8, (Math.random()-0.5)*20, (Math.random()-0.5)*20, 0x664422);
+                c.esCaja = true;
+                cajasMision.push(c);
+            }
+        }
+
+        // --- CONTROLADORES ---
         const controls = new PointerLockControls(camera, document.body);
         document.getElementById('btn-jugar').addEventListener('click', () => {
             iniciado = true;
             document.getElementById('menu-inicio').style.display = 'none';
             document.getElementById('ui').style.display = 'block';
             controls.lock();
-            camera.position.set(0, 1.7, 13);
+            setNoche(1);
         });
-
-        const itemsMision = [];
-        function spawnCajas() {
-            itemsMision.forEach(c => scene.remove(c)); itemsMision.length = 0;
-            for(let i=0; i<3; i++) {
-                const c = crearCaja(0.7, 0.7, 0.7, (Math.random()-0.5)*15, (Math.random()-0.5)*15, 0x8b4513, false);
-                itemsMision.push(c);
-            }
-        }
-        spawnCajas();
 
         const keys = {};
         document.addEventListener('keydown', (e) => keys[e.code] = true);
         document.addEventListener('keyup', (e) => keys[e.code] = false);
 
         function decir(txt) {
-            document.getElementById('subtitulos').innerText = txt;
-            setTimeout(() => document.getElementById('subtitulos').innerText = "", 3000);
+            const s = document.getElementById('subtitulos');
+            s.innerText = txt;
+            setTimeout(() => { if(s.innerText === txt) s.innerText = ""; }, 4000);
         }
 
         function setNoche(n) {
-            noche = n; misionPaso = 0; cajasRecogidas = 0;
-            camera.position.set(0, 1.7, 13);
-            document.getElementById('noche-info').innerText = `NOCHE ${n}`;
-            if(n === 7) {
-                luzAmbiental.intensity = 0.05; luzLocal.intensity = 0; flashlight.intensity = 5;
-                scene.remove(jony);
-                document.getElementById('objetivo').innerText = "¿Jony?";
+            noche = n; misionPaso = 0; cajas = 0;
+            document.getElementById('noche-display').innerText = `Noche ${n}`;
+            camera.position.set(0, 1.7, 12);
+            
+            if(n < 7) {
+                decir("Otro turno más... busquemos a Jony.");
+                colocarCajas();
             } else {
-                document.getElementById('objetivo').innerText = "Habla con Jony.";
-                spawnCajas();
+                // NOCHE FINAL
+                scene.fog = new THREE.FogExp2(0x000000, 0.15);
+                ambLight.intensity = 0.01;
+                scene.remove(jony);
+                document.getElementById('objetivo').innerText = "¿Dónde está Jony? Buscalo.";
             }
         }
 
-        function update() {
-            requestAnimationFrame(update);
-            if (!iniciado || muerto) return;
+        // --- LOOP PRINCIPAL ---
+        function animate() {
+            requestAnimationFrame(animate);
+            if(!iniciado || muerto) return;
 
-            if (controls.isLocked) {
-                const oldPos = camera.position.clone();
-                if(keys['KeyW']) controls.moveForward(0.15);
-                if(keys['KeyS']) controls.moveForward(-0.15);
-                if(keys['KeyA']) controls.moveRight(-0.15);
-                if(keys['KeyD']) controls.moveRight(0.15);
+            let time = clock.getElapsedTime();
 
-                const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.6, 1.8, 0.6));
-                for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
+            if(controls.isLocked) {
+                // Movimiento
+                const speed = 0.12;
+                const prevPos = camera.position.clone();
+                if(keys['KeyW']) controls.moveForward(speed);
+                if(keys['KeyS']) controls.moveForward(-speed);
+                if(keys['KeyA']) controls.moveRight(-speed);
+                if(keys['KeyD']) controls.moveRight(speed);
+
+                // Bobbing de linterna (efecto caminar)
+                if(keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD']) {
+                    flashLight.position.y = Math.sin(time * 10) * 0.05;
+                }
+
+                // Colisiones
+                const playerBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.7, 1.8, 0.7));
+                for(let box of colisionables) {
+                    if(playerBox.intersectsBox(box)) camera.position.copy(prevPos);
+                }
 
                 const pPos = camera.position;
+
+                // Lógica de Noches 1-6
                 if(noche < 7) {
-                    if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2) {
-                        misionPaso = 1; decir("Jony: Hola Alejo, juntá esas 3 cajas y andate.");
-                        document.getElementById('objetivo').innerText = "Recoge las cajas.";
+                    if(misionPaso === 0 && pPos.distanceTo(jony.position) < 3) {
+                        decir("Jony: Ey Alejo, el jefe dejó 3 cajas tiradas. Juntalas y andate rápido.");
+                        misionPaso = 1;
+                        document.getElementById('objetivo').innerText = "Recogé las 3 cajas.";
                     }
                     if(misionPaso === 1) {
-                        itemsMision.forEach((c, i) => {
-                            if(pPos.distanceTo(c.position) < 1.5) {
-                                scene.remove(c); itemsMision.splice(i, 1);
-                                cajasRecogidas++; decir(`Cajas: ${cajasRecogidas}/3`);
-                                if(cajasRecogidas === 3) { misionPaso = 2; document.getElementById('objetivo').innerText = "Sal por la puerta."; }
+                        cajasMision.forEach((c, i) => {
+                            if(pPos.distanceTo(c.position) < 2) {
+                                scene.remove(c);
+                                cajasMision.splice(i, 1);
+                                cajas++;
+                                decir(`Cajas recogidas: ${cajas}/3`);
+                                if(cajas === 3) {
+                                    misionPaso = 2;
+                                    document.getElementById('objetivo').innerText = "Salí por la puerta principal (atrás tuyo).";
+                                }
                             }
                         });
                     }
-                    if(misionPaso === 2 && pPos.z > 15.5) setNoche(noche + 1);
-                } else {
-                    // NOCHE 7
-                    if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 0, 9)) < 2.5) {
-                        decir("¡HAY SANGRE ACÁ!"); misionPaso = 1;
-                        document.getElementById('objetivo').innerText = "¡CORRÉ A LA SALIDA!";
+                    if(misionPaso === 2 && pPos.z > 14.5) {
+                        setNoche(noche + 1);
                     }
+                } else {
+                    // LÓGICA NOCHE 7 (TERROR)
+                    if(misionPaso === 0 && pPos.distanceTo(jony.position) < 4) {
+                        decir("Hay mucha sangre acá... Jony no está.");
+                        misionPaso = 1;
+                        document.getElementById('objetivo').innerText = "¡SALÍ DE ACÁ AHORA!";
+                    }
+
                     const distM = pPos.distanceTo(maniqui.position);
+                    
+                    // Activación del maniqui reptador
                     if(misionPaso === 1 && distM < 15) {
                         if(!persiguiendo) {
                             persiguiendo = true;
+                            // Transformación a 4 patas
                             const t = maniqui.getObjectByName("torso");
-                            t.rotation.x = Math.PI / 2.2;
-                            maniqui.position.y = 0.3;
-                            maniqui.getObjectByName("brazoDer").rotation.x = -Math.PI / 3;
-                            maniqui.getObjectByName("brazoIzq").rotation.x = -Math.PI / 3;
+                            t.rotation.x = Math.PI / 2.1;
+                            maniqui.position.y = 0.4;
+                            maniqui.getObjectByName("brazoD").rotation.x = -Math.PI / 3;
+                            maniqui.getObjectByName("brazoI").rotation.x = -Math.PI / 3;
                         }
-                        const d = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
-                        maniqui.position.addScaledVector(d, 0.23);
-                        maniqui.position.y = 0.3 + Math.sin(Date.now() * 0.01) * 0.1;
-                        maniqui.lookAt(pPos.x, 0.4, pPos.z);
-                        if(distM < 1.2) { muerto = true; final(); }
+                        
+                        // Movimiento de persecución
+                        const dir = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
+                        maniqui.position.addScaledVector(dir, 0.24); // Muy rápido
+                        
+                        // Movimiento errático (zigzag)
+                        maniqui.position.x += Math.sin(time * 8) * 0.1; 
+                        maniqui.position.y = 0.4 + Math.abs(Math.sin(time * 12)) * 0.2; // Saltos de animal
+                        
+                        maniqui.lookAt(pPos.x, 0.5, pPos.z);
+
+                        // Parpadeo de linterna por miedo
+                        if(Math.random() > 0.9) flashLight.intensity = Math.random();
+                        else flashLight.intensity = 1.5;
+
+                        if(distM < 1.5) {
+                            muerto = true;
+                            gameOver();
+                        }
                     }
-                    if(pPos.z > 15.5) { iniciado = false; alert("LOGRASTE ESCAPAR DE CHIMBAS..."); location.reload(); }
+                    if(pPos.z > 14.5) {
+                        alert("LOGRASTE ESCAPAR DE CHIMBAS... POR AHORA.");
+                        location.reload();
+                    }
                 }
             }
             renderer.render(scene, camera);
         }
 
-        function final() {
+        function gameOver() {
             controls.unlock();
+            document.getElementById('muerte').style.display = 'block';
             document.getElementById('ui').style.display = 'none';
-            document.getElementById('pantalla-final').style.display = 'block';
-            document.getElementById('noticia-texto').innerText = "URGENTE: Empleado de comercio atacado por 'algo' en un local de Chimbas. No hubo sobrevivientes.";
+            document.getElementById('cronica-txt').innerText = "DIARIO DE CUYO: Hallaron restos humanos en el local de Chimbas. Los testigos aseguran que los maniquíes de la vidriera ahora tienen manchas rojas que no se quitan.";
         }
-        update();
+
+        animate();
     </script>
 </body>
 </html>
