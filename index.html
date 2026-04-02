@@ -32,7 +32,9 @@
 
         let noche = 1, misionPaso = 0, cajasRecogidas = 0, muerto = false, persiguiendo = false;
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x000000, 1, 14);
+        
+        // Niebla inicial (más clara para las primeras noches)
+        scene.fog = new THREE.Fog(0x000000, 2, 25);
         
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 1.7, 13); 
@@ -41,15 +43,24 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- LINTERNA (ARREGLO DEFINITIVO) ---
-        const flashlight = new THREE.SpotLight(0xffffff, 6, 22, 0.35, 0.5);
+        // --- SISTEMA DE ILUMINACIÓN ---
+        // Linterna (apagada por defecto: intensidad 0)
+        const flashlight = new THREE.SpotLight(0xffffff, 0, 22, 0.35, 0.5);
         camera.add(flashlight);
         const lTarget = new THREE.Object3D();
-        lTarget.position.set(0, 0, -5); // 5 metros adelante
+        lTarget.position.set(0, 0, -5);
         camera.add(lTarget);
         flashlight.target = lTarget;
         scene.add(camera);
-        const ambient = new THREE.AmbientLight(0x020202); scene.add(ambient);
+
+        // Luz de ambiente (Noches 1-4)
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5); // Luz tenue general
+        scene.add(ambientLight);
+        
+        // Luz de techo tipo "local de noche"
+        const topLight = new THREE.PointLight(0x2222ff, 0.3, 30);
+        topLight.position.set(0, 5, 0);
+        scene.add(topLight);
 
         // --- CONSTRUCCIÓN ---
         const colisionables = [];
@@ -125,17 +136,32 @@
             document.getElementById('noche-info').innerText = `NOCHE ${n}`;
             document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony.";
             spawnCajas();
+
+            // Lógica de iluminación por noche
+            if(n < 5) {
+                flashlight.intensity = 0; // Linterna apagada
+                ambientLight.intensity = 0.5; // Hay luz ambiental
+                scene.fog.far = 25; // Niebla lejana
+            }
+
             if(n === 2) maniqui.position.set(0, 1.8, -5);
             if(n === 3) maniqui.position.set(-10, 1.8, 5);
             if(n === 4) maniqui.position.set(0, 1.8, 10);
+            
             if(n === 5) {
+                // EL CAMBIO TERRORÍFICO:
+                flashlight.intensity = 6; // SE ENCIENDE LA LINTERNA
+                ambientLight.intensity = 0; // SE APAGA LA LUZ DEL LOCAL
+                topLight.intensity = 0;
+                scene.fog.far = 14; // Niebla cerrada y oscura
+                
                 scene.remove(jony);
-                // Jony desmembrado
-                crearCaja(0.2, 0.2, 0.8, -8.5, 9.5, 0x2244aa, false); // Brazo Jony
-                crearCaja(0.2, 0.6, 0.2, -7.5, 9, 0xffdbac, false); // Cabeza Jony
-                const sangre = crearCaja(2, 0.01, 2, -8, 9, 0x660000, false);
+                crearCaja(0.2, 0.2, 0.8, -8.5, 9.5, 0x2244aa, false);
+                crearCaja(0.2, 0.6, 0.2, -7.5, 9, 0xffdbac, false);
+                crearCaja(2, 0.01, 2, -8, 9, 0x660000, false);
                 maniqui.position.set(0, 1.8, -14);
                 document.getElementById('objetivo').innerText = "Objetivo: ¿Jony?";
+                decir("... Todo está oscuro. ¿Qué pasó con las luces?");
             }
         }
 
@@ -171,7 +197,6 @@
                 });
                 if(misionPaso === 2 && pPos.z > 14) setNoche(noche + 1);
             } else {
-                // Noche 5 final
                 if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 1, 9)) < 2.5) {
                     decir("¡DIOS MÍO! ¡JONY! ¡LO DESPEDAZÓ!");
                     misionPaso = 1; document.getElementById('objetivo').innerText = "¡HUYE A LA SALIDA!";
@@ -180,7 +205,7 @@
                     const distM = pPos.distanceTo(maniqui.position);
                     if(distM < 10) persiguiendo = true;
                     if(persiguiendo) {
-                        maniqui.position.x += (Math.random() - 0.5) * 0.1; // Vibración
+                        maniqui.position.x += (Math.random() - 0.5) * 0.1;
                         const d = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
                         maniqui.position.addScaledVector(d, 0.14);
                         maniqui.lookAt(pPos.x, 1.8, pPos.z);
