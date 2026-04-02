@@ -9,6 +9,19 @@
         #objetivo { position: absolute; bottom: 30px; left: 30px; font-size: 18px; background: rgba(0,0,0,0.8); padding: 15px; border-left: 4px solid #00ff00; }
         #subtitulos { position: absolute; bottom: 100px; width: 100%; text-align: center; font-size: 20px; color: #ffff00; padding: 0 50px; }
         #noche-info { position: absolute; top: 30px; right: 30px; font-size: 24px; color: #ff0000; font-weight: bold; }
+        
+        /* MENU DE DIALOGO */
+        #menu-dialogo { 
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9); border: 2px solid white; padding: 20px; z-index: 2000; color: white;
+            pointer-events: auto; width: 400px;
+        }
+        .opcion-btn { 
+            display: block; width: 100%; background: none; color: white; border: 1px solid #555; 
+            padding: 10px; margin: 10px 0; cursor: pointer; font-family: 'Courier New'; text-align: left;
+        }
+        .opcion-btn:hover { background: #333; border-color: #ffff00; }
+
         #pantalla-final { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; color: #ff3333; padding: 50px; box-sizing: border-box; z-index: 1000; text-align: center; }
     </style>
 </head>
@@ -18,6 +31,11 @@
         <div id="noche-info">NOCHE 1</div>
         <div id="objetivo">Objetivo: Habla con tu compañero Jony.</div>
         <div id="subtitulos"></div>
+    </div>
+
+    <div id="menu-dialogo">
+        <p id="pregunta-jony" style="color: #00ff00; margin-bottom: 15px;"></p>
+        <div id="contenedor-opciones"></div>
     </div>
 
     <div id="pantalla-final">
@@ -32,8 +50,6 @@
 
         let noche = 1, misionPaso = 0, cajasRecogidas = 0, muerto = false, persiguiendo = false;
         const scene = new THREE.Scene();
-        
-        // Niebla desactivada para las primeras noches (se activa en la 5)
         scene.fog = null;
         
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -43,13 +59,9 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- SISTEMA DE ILUMINACIÓN ---
-        
-        // 1. LUZ DE DÍA / LOCAL ENCENDIDO (Noches 1-4)
         const luzLocal = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2); 
         scene.add(luzLocal);
 
-        // 2. LINTERNA (Solo para Noche 5)
         const flashlight = new THREE.SpotLight(0xffffff, 0, 25, 0.4, 0.5);
         camera.add(flashlight);
         const lTarget = new THREE.Object3D();
@@ -58,7 +70,6 @@
         flashlight.target = lTarget;
         scene.add(camera);
 
-        // --- CONSTRUCCIÓN ---
         const colisionables = [];
         function crearCaja(w, h, d, x, z, color = 0x444444, col = true) {
             const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshPhongMaterial({color: color}));
@@ -77,7 +88,6 @@
             crearCaja(5, 2.8, 1.2, -7, 5 - (i*9), 0x222222);
         }
 
-        // --- ITEMS MISION ---
         const puntosSpawn = [{x: 0, z: 5}, {x: 0, z: -8}, {x: 8, z: 12}, {x: -8, z: -2}, {x: 0, z: -14}];
         const itemsMision = [];
         function spawnCajas() {
@@ -89,7 +99,6 @@
         }
         spawnCajas();
 
-        // --- PERSONAJES ---
         const jony = new THREE.Group();
         const jBody = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.6), new THREE.MeshPhongMaterial({color: 0x2244aa}));
         const jHead = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshPhongMaterial({color: 0xffdbac}));
@@ -107,24 +116,75 @@
         maniqui.add(mTorso, mHead, mLeg, mLegI, mArm, mArmI);
         maniqui.position.set(10, 1.8, -13); scene.add(maniqui);
 
-        // --- CONTROLES ---
         const controls = new PointerLockControls(camera, document.body);
-        document.body.addEventListener('click', () => { if(!muerto) controls.lock(); });
+        document.body.addEventListener('click', () => { 
+            if(!muerto && document.getElementById('menu-dialogo').style.display !== 'block') controls.lock(); 
+        });
         const keys = {};
         document.addEventListener('keydown', (e) => keys[e.code] = true);
         document.addEventListener('keyup', (e) => keys[e.code] = false);
 
         function decir(txt) {
             document.getElementById('subtitulos').innerText = txt;
-            setTimeout(() => { if(document.getElementById('subtitulos').innerText === txt) document.getElementById('subtitulos').innerText = ""; }, 4000);
+            setTimeout(() => { if(document.getElementById('subtitulos').innerText === txt) document.getElementById('subtitulos').innerText = ""; }, 4500);
         }
 
-        const dialogosJony = [
-            "Jony: ¡Hola Alejo! Qué bueno que llegaste, me da miedo estar solo acá.",
-            "Jony: Alejo, ¿viste el maniquí blanco? Juraría que hoy estaba mirando a la puerta...",
-            "Jony: Che... escuché ruidos al fondo. ¿Podés ir vos? A mí me tiemblan las piernas.",
-            "Jony: Mañana renuncio, Alejo. No aguanto más, este lugar está maldito. Terminemos rápido."
-        ];
+        // ESTRUCTURA DE DIALOGOS CON RESPUESTAS
+        const datosDialogo = {
+            1: {
+                pregunta: "Jony: ¡Hola Alejo! Qué bueno que llegaste, me da miedo estar solo acá.",
+                opciones: [
+                    { t: "¿Miedo de qué? Es un local de ropa.", r: "Jony: No sé... a veces siento que las perchas se mueven solas." },
+                    { t: "Tranquilo, ya estoy acá.", r: "Jony: Gracias che, me hacés un favorazo. Empecemos." }
+                ]
+            },
+            2: {
+                pregunta: "Jony: Alejo, ¿viste el maniquí blanco? Juraría que hoy estaba mirando a la puerta...",
+                opciones: [
+                    { t: "Lo habrán movido los del turno mañana.", r: "Jony: Puede ser... pero no vi a nadie entrar al fondo." },
+                    { t: "Estás sugestionado, Jony.", r: "Jony: Ojalá sea eso. Pero mirale los ojos... parece que brillan." }
+                ]
+            },
+            3: {
+                pregunta: "Jony: Che... escuché ruidos al fondo. ¿Podés ir vos? A mí me tiemblan las piernas.",
+                opciones: [
+                    { t: "Dale, yo voy. Quedate acá.", r: "Jony: Sos un valiente. Por favor, si ves algo raro gritá." },
+                    { t: "¿Otra vez con eso? Voy yo, pero dejá de joder.", r: "Jony: Perdón... es que en serio escuché un golpe seco." }
+                ]
+            },
+            4: {
+                pregunta: "Jony: Mañana renuncio, Alejo. No aguanto más. Terminemos rápido.",
+                opciones: [
+                    { t: "No me dejes solo, falta poco.", r: "Jony: Lo siento amigo, pero mi vida vale más que este sueldo." },
+                    { t: "Hacés bien, este lugar es raro.", r: "Jony: ¿Viste? Vos también lo sentís. Hay algo malo acá." }
+                ]
+            }
+        };
+
+        function mostrarMenuDialogo(n) {
+            controls.unlock();
+            const menu = document.getElementById('menu-dialogo');
+            const pregunta = document.getElementById('pregunta-jony');
+            const contenedor = document.getElementById('contenedor-opciones');
+            
+            pregunta.innerText = datosDialogo[n].pregunta;
+            contenedor.innerHTML = "";
+            
+            datosDialogo[n].opciones.forEach(opc => {
+                const btn = document.createElement('button');
+                btn.className = "opcion-btn";
+                btn.innerText = opc.t;
+                btn.onclick = () => {
+                    menu.style.display = 'none';
+                    decir(opc.r);
+                    misionPaso = 1;
+                    document.getElementById('objetivo').innerText = "Objetivo: Recoge las 3 cajas.";
+                    controls.lock();
+                };
+                contenedor.appendChild(btn);
+            });
+            menu.style.display = 'block';
+        }
 
         function setNoche(n) {
             noche = n; misionPaso = 0; cajasRecogidas = 0;
@@ -138,11 +198,9 @@
             if(n === 4) maniqui.position.set(0, 1.8, 10);
             
             if(n === 5) {
-                // CAMBIO RADICAL A OSCURIDAD
-                luzLocal.intensity = 0; // Se apaga la luz general
-                flashlight.intensity = 6; // Se enciende la linterna
-                scene.fog = new THREE.Fog(0x000000, 1, 12); // Aparece la niebla negra
-                
+                luzLocal.intensity = 0; 
+                flashlight.intensity = 6; 
+                scene.fog = new THREE.Fog(0x000000, 1, 12); 
                 scene.remove(jony);
                 crearCaja(0.2, 0.2, 0.8, -8.5, 9.5, 0x2244aa, false);
                 crearCaja(0.2, 0.6, 0.2, -7.5, 9, 0xffdbac, false);
@@ -170,19 +228,21 @@
 
             if(noche < 5) {
                 if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) {
-                    misionPaso = 1; decir(dialogosJony[noche-1]);
-                    document.getElementById('objetivo').innerText = "Objetivo: Recoge las 3 cajas.";
+                    mostrarMenuDialogo(noche);
+                    misionPaso = -1; // Estado temporal para no repetir el menu
                 }
-                itemsMision.forEach((c, i) => {
-                    if(pPos.distanceTo(c.position) < 2) {
-                        scene.remove(c); itemsMision.splice(i, 1);
-                        cajasRecogidas++; decir(`Cajas recogidas: ${cajasRecogidas}/3`);
-                        if(cajasRecogidas === 3) {
-                            document.getElementById('objetivo').innerText = "Objetivo: Sal por la puerta.";
-                            misionPaso = 2;
+                if(misionPaso === 1) {
+                    itemsMision.forEach((c, i) => {
+                        if(pPos.distanceTo(c.position) < 2) {
+                            scene.remove(c); itemsMision.splice(i, 1);
+                            cajasRecogidas++; decir(`Cajas recogidas: ${cajasRecogidas}/3`);
+                            if(cajasRecogidas === 3) {
+                                document.getElementById('objetivo').innerText = "Objetivo: Sal por la puerta.";
+                                misionPaso = 2;
+                            }
                         }
-                    }
-                });
+                    });
+                }
                 if(misionPaso === 2 && pPos.z > 14) setNoche(noche + 1);
             } else {
                 if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 1, 9)) < 2.5) {
