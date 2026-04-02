@@ -107,11 +107,54 @@
         spawnCajas();
 
         // --- JONY ---
-        const jony = new THREE.Group();
-        const jBody = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.6), new THREE.MeshPhongMaterial({color: 0x2244aa}));
-        const jHead = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshPhongMaterial({color: 0xffdbac}));
-        jHead.position.y = 0.9; jony.add(jBody, jHead);
-        jony.position.set(-8, 0.8, 9); scene.add(jony);
+        // FUNCIÓN PARA CREAR HUMANOS/MANIQUÍES DETALLADOS
+function crearHumanoide(colorRopa, colorPiel, esManiqui = false) {
+    const grupo = new THREE.Group();
+    
+    // Si es maniquí, le damos brillo de plástico (shininess)
+    const matCuerpo = new THREE.MeshPhongMaterial({ 
+        color: colorRopa, 
+        shininess: esManiqui ? 100 : 10 
+    });
+    const matPiel = new THREE.MeshPhongMaterial({ color: colorPiel });
+
+    // Torso (Pecho)
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), matCuerpo);
+    torso.position.y = 1.2;
+    grupo.add(torso);
+
+    // Cabeza (Ovalada)
+    const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matPiel);
+    cabeza.position.y = 1.65;
+    cabeza.scale.y = 1.2; 
+    grupo.add(cabeza);
+
+    // Brazos
+    const brazoG = new THREE.BoxGeometry(0.12, 0.6, 0.12);
+    const brazoDer = new THREE.Mesh(brazoG, matPiel);
+    brazoDer.position.set(0.35, 1.2, 0);
+    grupo.add(brazoDer);
+
+    const brazoIzq = brazoDer.clone();
+    brazoIzq.position.x = -0.35;
+    grupo.add(brazoIzq);
+
+    // Piernas
+    const piernaG = new THREE.BoxGeometry(0.18, 0.8, 0.18);
+    const piernaDer = new THREE.Mesh(piernaG, matCuerpo);
+    piernaDer.position.set(0.15, 0.4, 0);
+    grupo.add(piernaDer);
+
+    const piernaIzq = piernaDer.clone();
+    piernaIzq.position.x = -0.15;
+    grupo.add(piernaIzq);
+
+    return grupo;
+}
+
+// AHORA USAMOS LA FUNCIÓN:
+const jony = crearHumanoide(0x2244aa, 0xffdbac, false); // Jony con ropa azul
+const maniqui = crearHumanoide(0xffffff, 0xffffff, true); // Maniquí blanco brillante
 
         // --- SISTEMA DE MANIQUÍES ---
         const matM = new THREE.MeshPhongMaterial({color: 0xffffff, shininess: 100});
