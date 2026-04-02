@@ -81,12 +81,10 @@
         crearCaja(1, 4, 32, -13, 0); // Pared izquierda
         crearCaja(1, 4, 32, 13, 0);  // Pared derecha
         
-        // Pared frontal con hueco para puerta
         crearCaja(11, 4, 1, -7.5, 16); 
         crearCaja(11, 4, 1, 7.5, 16);
-        crearCaja(4, 1, 1, 0, 16, 0x444444); // Dintel (arriba de la puerta)
+        crearCaja(4, 1, 1, 0, 16, 0x444444); 
         
-        // --- LA PUERTA (SALIDA) (Cartel verde ELIMINADO) ---
         const puertaMarco = crearCaja(4, 3, 0.2, 0, 15.8, 0x111111, false);
 
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshPhongMaterial({color: 0x222222}));
@@ -130,20 +128,20 @@
             return mGroup;
         }
 
-        // 1. El Maniquí Asesino (el único que se mueve)
+        // 1. Maniquí Asesino (móvil)
         const maniqui = crearGeometriaManiqui();
         maniqui.position.set(10, 1.8, -13); scene.add(maniqui);
 
-        // 2. Maniquí Estático A (Esquina delantera derecha)
+        // 2. Maniquí Estático A (Fondo Izquierda)
         const maniquiEstaticoA = crearGeometriaManiqui();
-        maniquiEstaticoA.position.set(11, 1.8, 14);
-        maniquiEstaticoA.rotation.y = Math.PI / 4; // Mirando un poco hacia el centro
+        maniquiEstaticoA.position.set(-11, 1.8, -14);
+        maniquiEstaticoA.rotation.y = Math.PI / 4; 
         scene.add(maniquiEstaticoA);
 
-        // 3. Maniquí Estático B (Pasillo central, cerca del fondo)
+        // 3. Maniquí Estático B (Fondo Derecha)
         const maniquiEstaticoB = crearGeometriaManiqui();
-        maniquiEstaticoB.position.set(0, 1.8, -5);
-        maniquiEstaticoB.rotation.y = Math.PI; // Mirando hacia la entrada
+        maniquiEstaticoB.position.set(11, 1.8, -14);
+        maniquiEstaticoB.rotation.y = -Math.PI / 4; 
         scene.add(maniquiEstaticoB);
 
 
@@ -192,7 +190,6 @@
             document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony.";
             spawnCajas();
             
-            // Solo movemos el maniquí asesino
             if(n === 4) maniqui.position.set(0, 1.8, -10);
             if(n === 5) maniqui.position.set(10, 1.8, 0);
             if(n === 6) maniqui.position.set(0, 1.8, 8);
