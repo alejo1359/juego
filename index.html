@@ -2,58 +2,47 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chimbas Horror: Specimen Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chimbas Horror: Visibilidad Total</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
-        canvas { display: block; touch-action: none; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+        #gui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: white; display: none; }
+        #status { position: absolute; top: 20px; left: 20px; text-shadow: 2px 2px #000; }
+        #noche-label { color: #ff0000; font-size: 28px; font-weight: bold; }
+        #mision-label { font-size: 18px; color: #00ff00; }
+        #subtitulos { position: absolute; bottom: 120px; width: 100%; text-align: center; font-size: 22px; color: #ffff00; text-shadow: 2px 2px #000; }
         
-        /* UI Estilo Juego Profesional */
-        #gui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: rgba(255,255,255,0.5); border-radius: 50%; transform: translate(-50%, -50%); }
-        #status { position: absolute; top: 20px; left: 20px; color: #fff; text-shadow: 2px 2px #000; }
-        #noche-label { color: #ff0000; font-weight: bold; font-size: 24px; }
-        #mision-label { font-size: 16px; color: #00ff00; margin-top: 5px; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        h1 { color: red; font-size: 3.5em; margin: 0; }
+        button { padding: 15px 40px; font-size: 20px; background: red; color: white; border: none; cursor: pointer; margin-top: 20px; font-family: inherit; }
         
-        #joystick { position: absolute; bottom: 40px; left: 40px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%; display: none; }
-
-        /* Menús */
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; z-index: 100; transition: opacity 0.5s; }
-        h1 { color: #8b0000; font-size: 3rem; letter-spacing: 5px; margin-bottom: 20px; text-align: center; }
-        button { padding: 15px 40px; background: #8b0000; color: #fff; border: none; font-size: 1.2rem; cursor: pointer; border-radius: 5px; box-shadow: 0 0 15px rgba(139,0,0,0.5); }
-        button:active { transform: scale(0.95); }
-
-        /* Dialogos */
-        #dialogo-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10,10,10,0.95); border: 1px solid #333; padding: 25px; color: #fff; display: none; z-index: 50; width: 300px; pointer-events: auto; }
-        .sub { position: absolute; bottom: 120px; width: 100%; text-align: center; color: #ffff00; font-size: 1.2rem; text-shadow: 2px 2px #000; }
+        #dialogo-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); border: 2px solid #444; padding: 25px; display: none; z-index: 200; color: white; text-align: center; width: 350px; }
     </style>
 </head>
 <body>
 
 <div id="start-screen" class="overlay">
-    <h1>CHIMBAS HORROR</h1>
-    <p style="color: #666; margin-bottom: 30px;">Optimizado para Móvil y PC</p>
-    <button id="btn-start">INICIAR TURNO</button>
+    <h1>TERROR EN CHIMBAS</h1>
+    <p style="color: #888;">Optimizado: Ahora con piernas y mejor luz.</p>
+    <button id="btn-start">EMPEZAR TURNO</button>
 </div>
 
 <div id="gui">
     <div id="status">
         <div id="noche-label">NOCHE 1</div>
-        <div id="mision-label">Busca a Jony en el mostrador</div>
+        <div id="mision-label">Habla con Jony en el mostrador</div>
     </div>
-    <div id="crosshair"></div>
-    <div class="sub" id="subtitulos"></div>
-    <div id="joystick"></div>
+    <div id="subtitulos"></div>
 </div>
 
 <div id="dialogo-box">
     <p id="dialogo-txt"></p>
-    <button id="btn-mision" style="width: 100%; margin-top: 10px;">Aceptar</button>
+    <button id="btn-mision" style="width: 100%;">ACEPTAR</button>
 </div>
 
 <div id="end-screen" class="overlay" style="display: none;">
-    <h1 id="end-title">DIARIO LOCAL</h1>
-    <p id="end-msg" style="color: #fff; max-width: 80%; text-align: center;"></p>
+    <h1 id="end-title">FIN DEL TURNO</h1>
+    <p id="end-msg" style="text-align: center; padding: 20px;"></p>
     <button onclick="location.reload()">REINTENTAR</button>
 </div>
 
@@ -61,32 +50,26 @@
     import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
     import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/PointerLockControls.js';
 
-    // --- CONFIGURACIÓN ---
-    let noche = 1, misionPaso = 0, cajas = 0, muerto = false, persiguiendo = false;
+    let noche = 1, misionPaso = 0, cajasCunt = 0, muerto = false, persiguiendo = false;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
-    scene.fog = new THREE.Fog(0x000000, 5, 45);
+    scene.fog = new THREE.Fog(0x000000, 5, 60); // Niebla mucho más lejana
 
-    const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 500);
-    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-    renderer.setPixelRatio(window.devicePixelRatio > 1.5 ? 1.5 : window.devicePixelRatio);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // --- LUCES ---
-    const ambient = new THREE.AmbientLight(0x404040, 0.2);
-    scene.add(ambient);
+    // --- ILUMINACIÓN MEJORADA ---
+    scene.add(new THREE.AmbientLight(0xffffff, 0.18)); // Más luz base
+    
+    const flashlight = new THREE.SpotLight(0xffffff, 0, 45, 0.45, 0.5); // Linterna más potente
+    camera.add(flashlight);
+    const flTarget = new THREE.Object3D(); flTarget.position.z = -1; camera.add(flTarget);
+    flashlight.target = flTarget; scene.add(camera);
 
-    const flash = new THREE.SpotLight(0xffffff, 0, 30, 0.4, 0.5);
-    camera.add(flash);
-    const flashTarget = new THREE.Object3D();
-    flashTarget.position.z = -1;
-    camera.add(flashTarget);
-    flash.target = flashTarget;
-    scene.add(camera);
-
-    // --- CONSTRUCCIÓN OPTIMIZADA ---
-    const wallMat = new THREE.MeshLambertMaterial({ color: 0x1a1a1a });
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
     const colBox = [];
 
     function box(w, h, d, x, z, mat = wallMat, col = true) {
@@ -97,198 +80,152 @@
         return m;
     }
 
-    // Tienda
-    box(26, 6, 1, 0, -15); box(1, 6, 30, -13, 0); box(1, 6, 30, 13, 0);
-    box(10, 6, 1, -8, 15); box(10, 6, 1, 8, 15);
-    box(4, 1.2, 2, -9, 10, new THREE.MeshLambertMaterial({color:0x3b2a1a})); // Mostrador
-
-    // Alacenas
+    // --- TIENDA ---
+    box(26, 6, 1, 0, -16); box(1, 6, 32, -13, 0); box(1, 6, 32, 13, 0);
+    box(11, 6, 1, -7.5, 16); box(11, 6, 1, 7.5, 16); 
+    box(4, 1.2, 2, -9, 11, new THREE.MeshLambertMaterial({color:0x4d3319})); // Mostrador
+    
+    // ALACENAS (ESTANTES)
     for(let i=0; i<3; i++){
-        box(5, 4, 1.5, 7, 5-(i*8));
-        box(5, 4, 1.5, -7, 5-(i*8));
+        box(5, 4, 1.8, 7.5, 5-(i*9));
+        box(5, 4, 1.8, -7.5, 5-(i*9));
     }
 
-    // Ciudad simplificada para rendimiento extremo
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshLambertMaterial({color:0x050505}));
-    floor.rotation.x = -Math.PI/2;
-    scene.add(floor);
+    // CIUDAD
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshLambertMaterial({color:0x050505}));
+    floor.rotation.x = -Math.PI/2; scene.add(floor);
 
     function poste(x, z) {
-        box(0.3, 7, 0.3, x, z, wallMat, false);
-        const l = new THREE.PointLight(0xffaa00, 1.5, 25);
-        l.position.set(x, 6, z);
-        scene.add(l);
+        box(0.4, 7, 0.4, x, z, wallMat, false);
+        const l = new THREE.PointLight(0xff9900, 2, 40); // Luz naranja potente
+        l.position.set(x, 6.5, z); scene.add(l);
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshBasicMaterial({color:0xffaa00}));
+        bulb.position.set(x, 6.7, z); scene.add(bulb);
     }
-    for(let i=0; i<10; i++) {
-        let ang = (i / 10) * Math.PI * 2;
-        poste(Math.cos(ang)*60, Math.sin(ang)*60);
-    }
-
-    const posCasa = new THREE.Vector3(50, 1.7, 50);
-    box(10, 6, 10, posCasa.x, posCasa.z, new THREE.MeshLambertMaterial({color:0x001100}));
-    const lCasa = new THREE.PointLight(0x00ff00, 2, 20);
-    lCasa.position.set(posCasa.x, 3, posCasa.z - 6);
-    scene.add(lCasa);
-
-    // --- PERSONAJES ---
-    function body(color) {
-        const g = new THREE.Group();
-        const t = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), new THREE.MeshLambertMaterial({color}));
-        t.position.y = 1.3; t.name="torso"; g.add(t);
-        const h = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshLambertMaterial({color: 0xffdbac}));
-        h.position.y = 0.5; t.add(h);
-        const b = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.7, 0.15), new THREE.MeshLambertMaterial({color}));
-        b.position.set(0.4, 0, 0); b.name="b1"; t.add(b);
-        const b2 = b.clone(); b2.position.x = -0.4; b2.name="b2"; t.add(b2);
-        return g;
+    for(let i=0; i<12; i++) {
+        let ang = (i / 12) * Math.PI * 2;
+        poste(Math.cos(ang)*70, Math.sin(ang)*70);
     }
 
-    const jony = body(0x2244aa); jony.position.set(-8, 0, 8); scene.add(jony);
-    const monster = body(0xeeeeee); monster.position.set(10, 0, -10); scene.add(monster);
+    const posCasa = new THREE.Vector3(60, 1.7, 60);
+    box(14, 8, 14, posCasa.x, posCasa.z, new THREE.MeshLambertMaterial({color:0x002200}));
+    const lCasa = new THREE.PointLight(0x00ff00, 2.5, 30);
+    lCasa.position.set(posCasa.x, 3, posCasa.z - 8); scene.add(lCasa);
 
-    // --- ITEMS ---
+    // --- PERSONAJES CON PIERNAS ---
+    function body(colorRopa, colorPiel) {
+        const grupo = new THREE.Group();
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), new THREE.MeshLambertMaterial({color: colorRopa}));
+        torso.position.y = 1.2; torso.name="torso"; grupo.add(torso);
+        const cab = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshLambertMaterial({color: colorPiel}));
+        cab.position.y = 0.5; torso.add(cab);
+        const bD = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.12), new THREE.MeshLambertMaterial({color: colorPiel}));
+        bD.position.set(0.35, 0, 0); bD.name="brazoDer"; torso.add(bD);
+        const bI = bD.clone(); bI.position.x = -0.35; bI.name="brazoIzq"; torso.add(bI);
+        // Piernas unidas al grupo principal
+        const pD = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.8, 0.18), new THREE.MeshLambertMaterial({color: colorRopa}));
+        pD.position.set(0.15, 0.4, 0); pD.name="piernaDer"; grupo.add(pD);
+        const pI = pD.clone(); pI.position.x = -0.15; pI.name="piernaIzq"; grupo.add(pI);
+        return grupo;
+    }
+
+    const jony = body(0x2244aa, 0xffdbac); jony.position.set(-8, 0, 9); scene.add(jony);
+    const maniqui = body(0xffffff, 0xeeeeee); maniqui.position.set(10, 0, -12); scene.add(maniqui);
+
+    // --- CAJAS ---
     const cajaItems = [];
     function setCajas() {
-        cajaItems.forEach(c => scene.remove(c));
-        cajaItems.length = 0;
-        const pts = [{x:7, z:5}, {x:-7, z:-3}, {x:0, z:-10}];
-        pts.forEach(p => {
-            const c = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8), new THREE.MeshLambertMaterial({color:0x553311}));
-            c.position.set(p.x, 0.4, p.z);
-            scene.add(c); cajaItems.push(c);
+        cajaItems.forEach(c => scene.remove(c)); cajaItems.length = 0;
+        const pos = [{x:7, z:5}, {x:-7, z:-4}, {x:0, z:-10}];
+        pos.forEach(p => {
+            const c = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.8,0.8), new THREE.MeshLambertMaterial({color:0x80552b}));
+            c.position.set(p.x, 0.4, p.z); scene.add(c); cajaItems.push(c);
         });
     }
     setCajas();
 
-    // --- LÓGICA DE JUEGO ---
+    // --- CONTROLES ---
     const controls = new PointerLockControls(camera, document.body);
     document.getElementById('btn-start').onclick = () => {
-        document.getElementById('start-screen').style.opacity = 0;
-        setTimeout(() => document.getElementById('start-screen').style.display='none', 500);
+        document.getElementById('start-screen').style.display='none';
         document.getElementById('gui').style.display='block';
-        controls.lock();
-        camera.position.set(0, 1.7, 13);
+        controls.lock(); camera.position.set(0, 1.7, 13);
     };
 
-    const keys = {};
-    document.addEventListener('keydown', e => keys[e.code]=true);
-    document.addEventListener('keyup', e => keys[e.code]=false);
+    const keys = {}; document.addEventListener('keydown', e => keys[e.code]=true); document.addEventListener('keyup', e => keys[e.code]=false);
+    function decir(t) { document.getElementById('subtitulos').innerText=t; setTimeout(()=>document.getElementById('subtitulos').innerText="",3000); }
 
-    function decir(t) {
-        const s = document.getElementById('subtitulos');
-        s.innerText = t;
-        setTimeout(() => s.innerText="", 3000);
-    }
-
-    function resetNoche() {
-        noche++; 
-        if(noche > 7) { final("Salvado"); return; }
-        misionPaso = 0; cajas = 0; setCajas();
-        document.getElementById('noche-label').innerText = `NOCHE ${noche}`;
-        document.getElementById('mision-label').innerText = `Busca a Jony`;
-        camera.position.set(0, 1.7, 13);
-        if(noche === 7) {
-            scene.remove(jony);
-            flash.intensity = 5;
-            decir("¿Jony? ¿Dónde te metiste?");
-        }
+    function mostrarDialogo() {
+        controls.unlock();
+        const m = document.getElementById('dialogo-box'); m.style.display='block';
+        document.getElementById('dialogo-txt').innerText = "Jony: ¿Alejo, me das una mano buscando 3 cajas entre las alacenas?";
+        document.getElementById('btn-mision').onclick = () => {
+            m.style.display='none'; misionPaso=1;
+            document.getElementById('mision-label').innerText="Cajas: 0/3"; controls.lock();
+        };
     }
 
     function final(res) {
-        muerto = true;
-        controls.unlock();
-        document.getElementById('end-screen').style.display = 'flex';
-        document.getElementById('end-title').innerText = res === "Salvado" ? "¡SOBREVIVISTE!" : "DESAPARECIDO";
-        document.getElementById('end-msg').innerText = res === "Salvado" ? 
-            "Lograste aguantar la semana en la tienda de Chimbas. No vuelves nunca más." : 
-            "Alejo no regresó de su turno. Se encontró su linterna tirada entre las alacenas.";
+        muerto = true; controls.unlock(); document.getElementById('end-screen').style.display='flex';
+        document.getElementById('end-title').innerText = res==="Salvado" ? "¡LOGRADO!" : "CAPTURADO";
+        document.getElementById('end-msg').innerText = res==="Salvado" ? "Llegaste a casa justo a tiempo. El maniquí se quedó en la ventana." : "Alejo desapareció en Chimbas. Las piernas del maniquí se oían por toda la calle.";
     }
 
-    // --- BUCLE PRINCIPAL (60 FPS) ---
-    function loop() {
-        requestAnimationFrame(loop);
+    function update() {
+        requestAnimationFrame(update);
         if(!controls.isLocked || muerto) return;
 
         const oldPos = camera.position.clone();
-        const v = 0.22;
-        if(keys['KeyW']) controls.moveForward(v);
-        if(keys['KeyS']) controls.moveForward(-v);
-        if(keys['KeyA']) controls.moveRight(-v);
-        if(keys['KeyD']) controls.moveRight(v);
+        if(keys['KeyW']) controls.moveForward(0.24); if(keys['KeyS']) controls.moveForward(-0.24);
+        if(keys['KeyA']) controls.moveRight(-0.24); if(keys['KeyD']) controls.moveRight(0.24);
 
-        // Colisiones
-        const pB = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.6, 1.8, 0.6));
-        for(let b of colBox) if(pB.intersectsBox(b)) camera.position.copy(oldPos);
+        const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.7, 1.8, 0.7));
+        for(let b of colBox) if(pBox.intersectsBox(b)) camera.position.copy(oldPos);
 
-        const p = camera.position;
+        const pPos = camera.position;
 
-        // Noches 1-6
         if(noche < 7) {
-            if(misionPaso === 0 && p.distanceTo(jony.position) < 2.5) {
-                controls.unlock();
-                const db = document.getElementById('dialogo-box');
-                db.style.display = 'block';
-                document.getElementById('dialogo-txt').innerText = `Jony: Che, Alejo. Acomodame esas 3 cajas que están en los estantes.`;
-                document.getElementById('btn-mision').onclick = () => {
-                    db.style.display = 'none';
-                    misionPaso = 1;
-                    document.getElementById('mision-label').innerText = "Cajas: 0/3";
-                    controls.lock();
-                };
-            }
-            if(misionPaso === 1) {
+            if(misionPaso===0 && pPos.distanceTo(jony.position)<2.5) { mostrarDialogo(); misionPaso=-1; }
+            if(misionPaso===1) {
                 cajaItems.forEach((c, i) => {
-                    if(p.distanceTo(c.position) < 1.5) {
-                        scene.remove(c); cajaItems.splice(i, 1);
-                        cajas++;
-                        document.getElementById('mision-label').innerText = `Cajas: ${cajas}/3`;
-                        if(cajas >= 3) {
-                            misionPaso = 2;
-                            document.getElementById('mision-label').innerText = "Vuelve a casa (Luz Verde)";
-                            decir("Listo, ya terminé mi turno.");
-                        }
-                    }
+                    if(pPos.distanceTo(c.position)<2) { scene.remove(c); cajaItems.splice(i,1); cajasCunt++;
+                    decir("¡Recogida! ("+cajasCunt+"/3)");
+                    if(cajasCunt===3) { misionPaso=2; document.getElementById('mision-label').innerText="¡VETE A CASA! (Luz Verde)"; } }
                 });
             }
-            if(misionPaso === 2 && p.distanceTo(posCasa) < 10) resetNoche();
-        } 
-        // Noche 7 (Final)
-        else {
-            if(misionPaso === 0 && p.distanceTo(new THREE.Vector3(-8,0,8)) < 3) {
-                misionPaso = 1;
-                document.getElementById('mision-label').innerText = "¡CORRE A CASA!";
+            if(misionPaso===2 && pPos.distanceTo(posCasa)<12) {
+                noche++; misionPaso=0; cajasCunt=0; setCajas();
+                document.getElementById('noche-info').innerText = "NOCHE " + noche;
+                document.getElementById('mision-label').innerText = "Habla con Jony";
+                camera.position.set(0,1.7,13);
+                if(noche===7) { scene.remove(jony); flashlight.intensity=6; }
             }
-            if(misionPaso === 1) {
-                const dM = p.distanceTo(monster.position);
-                if(dM < 35) {
-                    persiguiendo = true;
-                    // Efecto 4 patas
-                    const t = monster.getObjectByName("torso");
+        } else {
+            if(misionPaso===0 && pPos.distanceTo(new THREE.Vector3(-8,0,9))<3) { decir("¿Jony? ¡Tengo que irme!"); misionPaso=1; }
+            if(misionPaso===1) {
+                const dM = pPos.distanceTo(maniqui.position);
+                if(dM < 40) {
+                    persiguiendo=true; 
+                    const t = maniqui.getObjectByName("torso");
                     t.position.y = 0.5; t.rotation.x = Math.PI/2.2;
-                    monster.getObjectByName("b1").rotation.x = -Math.PI/2;
-                    monster.getObjectByName("b2").rotation.x = -Math.PI/2;
+                    maniqui.getObjectByName("brazoDer").rotation.x = -Math.PI/2;
+                    maniqui.getObjectByName("brazoIzq").rotation.x = -Math.PI/2;
+                    // Piernas en pose de arrastre
+                    maniqui.getObjectByName("piernaDer").position.y = 0.2;
+                    maniqui.getObjectByName("piernaIzq").position.y = 0.2;
                 }
                 if(persiguiendo) {
-                    const dir = new THREE.Vector3().subVectors(p, monster.position).normalize();
-                    monster.position.addScaledVector(dir, 0.24);
-                    monster.lookAt(p.x, 0, p.z);
-                    if(dM < 1.5) final("Muerte");
+                    const dir = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
+                    maniqui.position.addScaledVector(dir, 0.25);
+                    maniqui.lookAt(pPos.x, 0, pPos.z);
+                    if(dM < 1.7) final("Muerte");
                 }
-                if(p.distanceTo(posCasa) < 10) final("Salvado");
+                if(pPos.distanceTo(posCasa)<12) final("Salvado");
             }
         }
-
         renderer.render(scene, camera);
     }
-
-    loop();
-
-    // Ajuste de ventana
-    window.onresize = () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    };
+    update();
 </script>
 </body>
 </html>
