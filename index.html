@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Terror en Chimbas: Luces de Ciudad</title>
+    <title>Terror en Chimbas: El Regreso</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
         #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 10; text-shadow: 2px 2px black; display: none; }
@@ -19,9 +19,11 @@
 
         #menu-dialogo { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95); border: 2px solid white; padding: 20px; z-index: 2000; color: white; width: 450px;
+            background: rgba(0,0,0,0.95); border: 2px solid white; padding: 20px; z-index: 2000; color: white; width: 450px; pointer-events: auto;
         }
-        .opcion-btn { display: block; width: 100%; background: none; color: white; border: 1px solid #555; padding: 12px; margin: 10px 0; cursor: pointer; }
+        .opcion-btn { display: block; width: 100%; background: none; color: white; border: 1px solid #555; padding: 12px; margin: 10px 0; cursor: pointer; font-family: 'Courier New'; text-align: left; }
+        .opcion-btn:hover { background: #222; border-color: #00ff00; color: #00ff00; }
+
         #pantalla-final { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; color: #ff3333; padding: 50px; z-index: 1000; text-align: center; }
     </style>
 </head>
@@ -29,18 +31,18 @@
 
     <div id="menu-inicio">
         <h1>TERROR EN CHIMBAS</h1>
-        <p>Camina por las calles iluminadas para llegar a casa.</p>
+        <p>Habla con Jony, termina el turno y huye de lo que hay en la oscuridad.</p>
         <button id="btn-jugar">EMPEZAR TURNO</button>
     </div>
 
     <div id="ui">
         <div id="noche-info">NOCHE 1</div>
-        <div id="objetivo">Objetivo: Habla con Jony.</div>
+        <div id="objetivo">Objetivo: Habla con tu compañero Jony.</div>
         <div id="subtitulos"></div>
     </div>
 
     <div id="menu-dialogo">
-        <p id="pregunta-jony" style="color: #00ff00;"></p>
+        <p id="pregunta-jony" style="color: #00ff00; margin-bottom: 15px; font-weight: bold;"></p>
         <div id="contenedor-opciones"></div>
     </div>
 
@@ -56,7 +58,7 @@
 
         let noche = 1, misionPaso = 0, cajasRecogidas = 0, muerto = false, persiguiendo = false, iniciado = false;
         const scene = new THREE.Scene();
-        scene.fog = new THREE.Fog(0x000000, 1, 80); // Niebla un poco más lejana
+        scene.fog = new THREE.Fog(0x000000, 1, 75);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 1.7, 13); 
@@ -65,17 +67,10 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- ILUMINACIÓN MEJORADA ---
-        const luzLuna = new THREE.AmbientLight(0xffffff, 0.15); // Más luz base para ver siluetas
-        scene.add(luzLuna);
-        
-        const luzTiendaInterna = new THREE.PointLight(0xffffff, 0.8, 25);
-        luzTiendaInterna.position.set(0, 4, 0);
-        scene.add(luzTiendaInterna);
-
-        const luzPuertaTienda = new THREE.PointLight(0xffffff, 0.5, 15);
-        luzPuertaTienda.position.set(0, 3, 17); // Luz en la entrada para no salir a ciegas
-        scene.add(luzPuertaTienda);
+        // --- LUCES ---
+        scene.add(new THREE.AmbientLight(0xffffff, 0.12));
+        const luzTienda = new THREE.PointLight(0xffffff, 0.8, 25);
+        luzTienda.position.set(0, 4, 0); scene.add(luzTienda);
 
         const flashlight = new THREE.SpotLight(0xffffff, 0, 40, 0.35, 0.5);
         camera.add(flashlight);
@@ -93,51 +88,33 @@
             return m;
         }
 
-        // --- TIENDA ---
+        // --- MAPA ---
         crearCaja(26, 4, 1, 0, -16); crearCaja(1, 4, 32, -13, 0); crearCaja(1, 4, 32, 13, 0);  
         crearCaja(11, 4, 1, -7.5, 16); crearCaja(11, 4, 1, 7.5, 16);  
-        crearCaja(4, 1.1, 2, -9, 11, 0x3d2b1f);
-        for(let i=0; i<3; i++) {
-            let zP = 5 - (i*9);
-            crearCaja(5, 2.8, 1.2, 7, zP, 0x111111);
-            crearCaja(5, 2.8, 1.2, -7, zP, 0x111111);
-        }
-
-        // --- CIUDAD ---
+        crearCaja(4, 1.1, 2, -9, 11, 0x3d2b1f); // Mostrador
+        
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshLambertMaterial({color: 0x0a0a0a}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
 
-        const posCasa = new THREE.Vector3(60, 1.7, 80); 
-        crearCaja(18, 8, 18, posCasa.x, posCasa.z, 0x051105);
+        const posCasa = new THREE.Vector3(55, 1.7, 75); 
+        crearCaja(18, 8, 18, posCasa.x, posCasa.z, 0x051105); // Casa
         const luzCasa = new THREE.PointLight(0x00ff00, 1.5, 20);
-        luzCasa.position.set(posCasa.x, 3, posCasa.z - 10);
-        scene.add(luzCasa);
+        luzCasa.position.set(posCasa.x, 3, posCasa.z - 10); scene.add(luzCasa);
 
-        function crearPosteLuz(x, z) {
+        function crearPoste(x, z) {
             crearCaja(0.4, 6, 0.4, x, z, 0x000000);
-            const luz = new THREE.PointLight(0xffaa00, 1.2, 30); // Luz naranja de calle
-            luz.position.set(x, 5.5, z);
-            scene.add(luz);
-            // Bombilla visual
-            const glow = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshBasicMaterial({color: 0xffcc33}));
-            glow.position.set(x, 5.8, z);
-            scene.add(glow);
+            const l = new THREE.PointLight(0xffaa00, 1.2, 30);
+            l.position.set(x, 5.5, z); scene.add(l);
         }
 
-        function generarCiudad() {
-            // Generamos manzanas más apretadas para que haya más postes
-            for(let x = -150; x <= 150; x += 40) {
-                for(let z = -150; z <= 150; z += 40) {
-                    if (Math.abs(x) < 35 && Math.abs(z) < 35) continue; 
-                    if (Math.abs(x - posCasa.x) < 25 && Math.abs(z - posCasa.z) < 25) continue; 
-
-                    crearCaja(25, 15 + Math.random()*15, 25, x, z, 0x151515);
-                    // Poste en la esquina de cada manzana
-                    crearPosteLuz(x + 18, z + 18);
-                }
+        for(let x = -120; x <= 120; x += 45) {
+            for(let z = -120; z <= 120; z += 45) {
+                if (Math.abs(x) < 35 && Math.abs(z) < 35) continue; 
+                if (Math.abs(x - posCasa.x) < 25 && Math.abs(z - posCasa.z) < 25) continue; 
+                crearCaja(25, 15 + Math.random()*15, 25, x, z);
+                crearPoste(x + 18, z + 18);
             }
         }
-        generarCiudad();
 
         // --- PERSONAJES ---
         function crearHumanoide(colorRopa, colorPiel) {
@@ -150,8 +127,8 @@
             bD.position.set(0.35, 0, 0); bD.name = "brazoDer"; torso.add(bD);
             const bI = bD.clone(); bI.position.x = -0.35; bI.name = "brazoIzq"; torso.add(bI);
             const pD = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.8, 0.18), new THREE.MeshLambertMaterial({color: colorRopa}));
-            pD.position.set(0.15, 0.4, 0); grupo.add(pD);
-            const pI = pD.clone(); pI.position.x = -0.15; grupo.add(pI);
+            pD.position.set(0.15, 0.4, 0); pD.name = "piernaDer"; grupo.add(pD);
+            const pI = pD.clone(); pI.position.x = -0.15; pI.name = "piernaIzq"; grupo.add(pI);
             grupo.add(torso);
             return grupo;
         }
@@ -161,34 +138,60 @@
         const maniqui = crearHumanoide(0xffffff, 0xeeeeee);
         maniqui.position.set(10, 0, -13); scene.add(maniqui);
 
-        // --- CONTROLES ---
-        const controls = new PointerLockControls(camera, document.body);
-        document.getElementById('btn-jugar').onclick = () => {
-            document.getElementById('menu-inicio').style.display = 'none';
-            document.getElementById('ui').style.display = 'block';
-            iniciado = true;
-            controls.lock();
+        // --- MISIONES Y DIALOGOS ---
+        const itemsMision = [];
+        function spawnCajas() {
+            itemsMision.forEach(c => scene.remove(c)); itemsMision.length = 0;
+            [{x: 5, z: 5}, {x: -5, z: -5}, {x: 8, z: -10}].forEach(p => {
+                const c = crearCaja(0.7, 0.7, 0.7, p.x, p.z, 0x442200, false);
+                itemsMision.push(c);
+            });
+        }
+        spawnCajas();
+
+        const datosDialogo = {
+            1: { p: "Jony: Che Alejo, ¿me ayudás a acomodar estas 3 cajas?", op: [{t: "Dale, las busco.", r: "Jony: Gracias, están por ahí tiradas."}] },
+            2: { p: "Jony: Escuché que anda gente rara afuera...", op: [{t: "Debe ser el viento.", r: "Jony: No sé... buscá las cajas rápido."}] },
+            3: { p: "Jony: El maniquí blanco me da escalofríos.", op: [{t: "¿Por qué?", r: "Jony: Parece que me mira. Terminemos rápido."}] },
+            4: { p: "Jony: ¿Viste que las luces de la calle parpadean?", op: [{t: "Es Chimbas, Jony.", r: "Jony: Tenés razón. Acomodá eso."}] },
+            5: { p: "Jony: Siento que no estamos solos.", op: [{t: "Me estás asustando.", r: "Jony: Perdoná, solo buscá las cajas."}] },
+            6: { p: "Jony: Mañana no vengo, me siento mal.", op: [{t: "Yo te cubro.", r: "Jony: Sos un grande. Terminemos esto."}] }
         };
 
-        const keys = {};
-        document.addEventListener('keydown', (e) => keys[e.code] = true);
-        document.addEventListener('keyup', (e) => keys[e.code] = false);
-
-        function decir(txt) {
-            document.getElementById('subtitulos').innerText = txt;
-            setTimeout(() => { document.getElementById('subtitulos').innerText = ""; }, 4000);
+        function mostrarDialogo(n) {
+            controls.unlock();
+            const menu = document.getElementById('menu-dialogo');
+            menu.style.display = 'block';
+            document.getElementById('pregunta-jony').innerText = datosDialogo[n].p;
+            const cont = document.getElementById('contenedor-opciones');
+            cont.innerHTML = "";
+            datosDialogo[n].op.forEach(o => {
+                const btn = document.createElement('button'); btn.className = "opcion-btn"; btn.innerText = o.t;
+                btn.onclick = () => { menu.style.display='none'; decir(o.r); misionPaso=1; document.getElementById('objetivo').innerText="Objetivo: Busca 3 cajas."; controls.lock(); };
+                cont.appendChild(btn);
+            });
         }
 
+        // --- LÓGICA PRINCIPAL ---
+        const controls = new PointerLockControls(camera, document.body);
+        document.getElementById('btn-jugar').onclick = () => { document.getElementById('menu-inicio').style.display='none'; document.getElementById('ui').style.display='block'; iniciado=true; controls.lock(); };
+        const keys = {}; document.addEventListener('keydown', (e) => keys[e.code] = true); document.addEventListener('keyup', (e) => keys[e.code] = false);
+        function decir(t) { document.getElementById('subtitulos').innerText = t; setTimeout(() => document.getElementById('subtitulos').innerText="", 3500); }
+
         function setNoche(n) {
-            noche = n; misionPaso = 0; cajasRecogidas = 0;
-            camera.position.set(0, 1.7, 13);
-            document.getElementById('noche-info').innerText = `NOCHE ${n}`;
-            decir("Noche " + n + ". Habla con Jony.");
-            if(n === 7) { 
-                scene.remove(jony); 
-                luzTiendaInterna.intensity = 0; 
-                flashlight.intensity = 5; 
-            }
+            noche = n; misionPaso = 0; cajasRecogidas = 0; camera.position.set(0, 1.7, 13);
+            document.getElementById('noche-info').innerText = "NOCHE " + n;
+            document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony.";
+            spawnCajas();
+            if(n === 7) { scene.remove(jony); luzTienda.intensity=0; flashlight.intensity=5; }
+        }
+
+        function animarCuatroPatas() {
+            const torso = maniqui.getObjectByName("torso");
+            torso.position.y = 0.5;
+            torso.rotation.x = Math.PI / 2.2; // Agachado hacia adelante
+            maniqui.getObjectByName("brazoDer").rotation.x = -Math.PI / 2;
+            maniqui.getObjectByName("brazoIzq").rotation.x = -Math.PI / 2;
         }
 
         function update() {
@@ -196,38 +199,31 @@
             if (!iniciado || !controls.isLocked || muerto) return;
             
             const oldPos = camera.position.clone();
-            const speed = 0.25;
-            if(keys['KeyW']) controls.moveForward(speed);
-            if(keys['KeyS']) controls.moveForward(-speed);
-            if(keys['KeyA']) controls.moveRight(-speed);
-            if(keys['KeyD']) controls.moveRight(speed);
+            if(keys['KeyW']) controls.moveForward(0.24); if(keys['KeyS']) controls.moveForward(-0.24);
+            if(keys['KeyA']) controls.moveRight(-0.24); if(keys['KeyD']) controls.moveRight(0.24);
 
             const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.7, 1.8, 0.7));
             for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
 
             const pPos = camera.position;
-            
             if(noche < 7) {
-                if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) {
-                    decir("Jony: Terminá de acomodar y andate a casa Alejo.");
-                    misionPaso = 1;
-                    document.getElementById('objetivo').innerText = "Objetivo: Camina hacia tu casa (Luz Verde).";
+                if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) { mostrarDialogo(noche); misionPaso = -1; }
+                if(misionPaso === 1) {
+                    itemsMision.forEach((c, i) => {
+                        if(pPos.distanceTo(c.position) < 2) { scene.remove(c); itemsMision.splice(i, 1); cajasRecogidas++; 
+                        decir("Cajas: " + cajasRecogidas + "/3");
+                        if(cajasRecogidas === 3) { misionPaso=2; document.getElementById('objetivo').innerText="Objetivo: Camina a tu casa (Luz verde)."; } }
+                    });
                 }
-                if(misionPaso === 1 && pPos.distanceTo(posCasa) < 12) {
-                    setNoche(noche + 1);
-                }
+                if(misionPaso === 2 && pPos.distanceTo(posCasa) < 12) { setNoche(noche + 1); }
             } else {
-                if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 1, 9)) < 3) {
-                    decir("¡JONY NO ESTÁ! ¡ALGO ME SIGUE!");
-                    misionPaso = 1;
-                    document.getElementById('objetivo').innerText = "¡CORRE A TU CASA!";
-                }
+                if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 1, 9)) < 3) { decir("¡JONY! ¿DÓNDE ESTÁS?"); misionPaso = 1; document.getElementById('objetivo').innerText="¡HUYE A CASA!"; }
                 if(misionPaso === 1) {
                     const distM = pPos.distanceTo(maniqui.position);
-                    if(distM < 30) persiguiendo = true;
+                    if(distM < 30 && !persiguiendo) { persiguiendo = true; animarCuatroPatas(); }
                     if(persiguiendo) {
                         const d = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
-                        maniqui.position.addScaledVector(d, 0.24);
+                        maniqui.position.addScaledVector(d, 0.25);
                         maniqui.lookAt(pPos.x, 0, pPos.z);
                         if(distM < 1.5) { muerto = true; final("Muerte"); }
                     }
@@ -237,12 +233,9 @@
             renderer.render(scene, camera);
         }
 
-        function final(tipo) {
-            controls.unlock();
-            document.getElementById('pantalla-final').style.display = 'block';
-            document.getElementById('noticia-texto').innerText = (tipo === "Muerte") ? 
-                "Alejo desapareció en las sombras de Chimbas. No se encontraron rastros." : 
-                "Lograste llegar a casa y cerrar todo. El maniquí se quedó observando desde la calle.";
+        function final(t) {
+            controls.unlock(); document.getElementById('pantalla-final').style.display = 'block';
+            document.getElementById('noticia-texto').innerText = (t === "Muerte") ? "Alejo fue alcanzado por la cosa blanca." : "Sobreviviste a la semana en la tienda.";
         }
         update();
     </script>
