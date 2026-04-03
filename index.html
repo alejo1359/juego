@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Terror en Chimbas: La Ciudad</title>
+    <title>Terror en Chimbas: Optimizado</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
         #ui { position: absolute; width: 100%; height: 100%; pointer-events: none; color: white; z-index: 10; text-shadow: 2px 2px black; display: none; }
@@ -36,10 +36,9 @@
     <div id="menu-inicio">
         <h1 style="font-size: 3.5em; letter-spacing: 10px; color: #ff0000;">TERROR EN CHIMBAS</h1>
         <p style="max-width: 600px; font-size: 1.2em; line-height: 1.5;">
-            San Juan, Argentina. 2026.<br><br>
-            Sos Alejo, un empleado en una tienda de ropa.<br>
-            Las calles están oscuras, pero los postes de luz te guiarán.<br>
-            No te alejes mucho de las luces al volver a casa.
+            Versión Fluida.<br><br>
+            Termina tu turno y llega a casa sano y salvo.<br>
+            Usa los postes de luz como guía.
         </p>
         <button id="btn-jugar">EMPEZAR TURNO</button>
     </div>
@@ -56,7 +55,7 @@
     </div>
 
     <div id="pantalla-final">
-        <h1 style="border-bottom: 2px solid red;">DIARIO DE SAN JUAN - EDICIÓN CRÓNICA</h1>
+        <h1 style="border-bottom: 2px solid red;">DIARIO DE SAN JUAN</h1>
         <div id="noticia-texto" style="font-size: 1.3em; max-width: 700px; margin: 40px auto; line-height: 1.6; text-align: left;"></div>
         <button onclick="location.reload()" style="background: red; color: white; border: none; padding: 10px 20px; cursor: pointer;">REINTENTAR</button>
     </div>
@@ -68,24 +67,25 @@
         let noche = 1, misionPaso = 0, cajasRecogidas = 0, muerto = false, persiguiendo = false, iniciado = false;
         const scene = new THREE.Scene();
         
-        // Niebla ajustada para que las luces se vean mejor a lo lejos
-        scene.fog = new THREE.FogExp2(0x050505, 0.012);
+        // Niebla más densa para optimizar el dibujado de objetos lejanos
+        scene.fog = new THREE.Fog(0x000000, 1, 60);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
         camera.position.set(0, 1.7, 13); 
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: false }); // Antialias desactivado para ganar FPS
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limita la resolución en pantallas 4K
         document.body.appendChild(renderer.domElement);
 
-        // --- ILUMINACIÓN GLOBAL ---
-        const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.1); // Casi nula en la calle
+        // --- ILUMINACIÓN ---
+        const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.05);
         scene.add(luzAmbiental);
-        const luzTienda = new THREE.PointLight(0xffffff, 0.8, 30);
+        const luzTienda = new THREE.PointLight(0xffffff, 0.8, 25);
         luzTienda.position.set(0, 4, 0);
         scene.add(luzTienda);
 
-        const flashlight = new THREE.SpotLight(0xffffff, 0, 45, 0.35, 0.5);
+        const flashlight = new THREE.SpotLight(0xffffff, 0, 35, 0.3, 0.5);
         camera.add(flashlight);
         const lTarget = new THREE.Object3D();
         camera.add(lTarget);
@@ -94,70 +94,49 @@
         scene.add(camera);
 
         const colisionables = [];
-        function crearCaja(w, h, d, x, z, color = 0x444444, col = true) {
-            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshPhongMaterial({color: color}));
+        function crearCaja(w, h, d, x, z, color = 0x333333, col = true) {
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color: color})); // Lambert es más rápido que Phong
             m.position.set(x, h/2, z); scene.add(m);
             if(col) colisionables.push(new THREE.Box3().setFromObject(m));
             return m;
         }
 
-        // --- MAPA: LA TIENDA ---
-        crearCaja(26, 4, 1, 0, -16); 
-        crearCaja(1, 4, 32, -13, 0); 
-        crearCaja(1, 4, 32, 13, 0);  
-        crearCaja(11, 4, 1, -7.5, 16); 
-        crearCaja(11, 4, 1, 7.5, 16);  
-        crearCaja(4, 1.1, 2, -9, 11, 0x3d2b1f);
-        
+        // --- TIENDA ---
+        crearCaja(26, 4, 1, 0, -16); crearCaja(1, 4, 32, -13, 0); crearCaja(1, 4, 32, 13, 0);  
+        crearCaja(11, 4, 1, -7.5, 16); crearCaja(11, 4, 1, 7.5, 16);  
+        crearCaja(4, 1.1, 2, -9, 11, 0x221100);
         for(let i=0; i<3; i++) {
             let zP = 5 - (i*9);
-            crearCaja(5, 2.8, 1.2, 7, zP, 0x222222);
-            crearCaja(5, 2.8, 1.2, -7, zP, 0x222222);
+            crearCaja(5, 2.8, 1.2, 7, zP, 0x111111);
+            crearCaja(5, 2.8, 1.2, -7, zP, 0x111111);
         }
 
-        // --- MAPA: PISO DE LA CIUDAD ---
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshPhongMaterial({color: 0x111111}));
+        // --- CIUDAD OPTIMIZADA (200x200) ---
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshLambertMaterial({color: 0x050505}));
         floor.rotation.x = -Math.PI/2; scene.add(floor);
 
-        // --- TU CASA ---
-        const posCasa = new THREE.Vector3(50, 1.7, 100); 
-        crearCaja(20, 8, 20, posCasa.x, posCasa.z, 0x113311); // Tu casa
-        const luzCasa = new THREE.PointLight(0x00ff00, 1.5, 15);
-        luzCasa.position.set(posCasa.x, 2.5, posCasa.z - 11); // Luz verde en tu puerta
+        const posCasa = new THREE.Vector3(45, 1.7, 60); 
+        crearCaja(15, 6, 15, posCasa.x, posCasa.z, 0x052205);
+        const luzCasa = new THREE.PointLight(0x00ff00, 1.2, 12);
+        luzCasa.position.set(posCasa.x, 2, posCasa.z - 8);
         scene.add(luzCasa);
 
-        // --- FUNCIONES DE CIUDAD ---
         function crearPosteLuz(x, z) {
-            crearCaja(0.4, 6, 0.4, x, z, 0x111111); // El caño del poste
-            
-            // Bombilla visible
-            const bombilla = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshBasicMaterial({color: 0xffaa00}));
-            bombilla.position.set(x, 6, z);
-            scene.add(bombilla);
-            
-            // La luz real que ilumina el suelo
-            const luz = new THREE.PointLight(0xffaa00, 0.9, 35);
-            luz.position.set(x, 5.5, z);
+            crearCaja(0.3, 5, 0.3, x, z, 0x000000);
+            const luz = new THREE.PointLight(0xff8800, 0.8, 25); // Menos intensidad pero mejor rango
+            luz.position.set(x, 4.5, z);
             scene.add(luz);
         }
 
         function generarCiudad() {
-            // Creamos una grilla de manzanas de 30x30, espaciadas cada 50 metros
-            for(let x = -200; x <= 200; x += 50) {
-                for(let z = -200; z <= 200; z += 50) {
-                    
-                    // ZONA SEGURA 1: La Tienda (evitamos que edificios crucen por (0,0))
-                    if (Math.abs(x) < 40 && Math.abs(z) < 40) continue; 
-                    
-                    // ZONA SEGURA 2: Tu Casa
-                    if (Math.abs(x - posCasa.x) < 30 && Math.abs(z - posCasa.z) < 30) continue; 
+            // Pasos más grandes para tener menos edificios pero más grandes
+            for(let x = -100; x <= 100; x += 50) {
+                for(let z = -100; z <= 100; z += 50) {
+                    if (Math.abs(x) < 35 && Math.abs(z) < 35) continue; 
+                    if (Math.abs(x - posCasa.x) < 20 && Math.abs(z - posCasa.z) < 20) continue; 
 
-                    // Crear edificio grande (manzana)
-                    let altura = 15 + Math.random() * 25; 
-                    crearCaja(30, altura, 30, x, z, 0x1a1a1a);
-                    
-                    // Agregar postes de luz en la esquina de cada manzana para iluminar las calles
-                    crearPosteLuz(x + 20, z + 20);
+                    crearCaja(25, 12 + Math.random()*10, 25, x, z, 0x111111);
+                    crearPosteLuz(x + 18, z + 18);
                 }
             }
         }
@@ -166,12 +145,12 @@
         // --- ENTIDADES ---
         function crearHumanoide(colorRopa, colorPiel, esManiqui = false) {
             const grupo = new THREE.Group();
-            const matR = new THREE.MeshPhongMaterial({ color: colorRopa, shininess: esManiqui ? 100 : 10 });
-            const matP = new THREE.MeshPhongMaterial({ color: colorPiel });
+            const matR = new THREE.MeshLambertMaterial({ color: colorRopa });
+            const matP = new THREE.MeshLambertMaterial({ color: colorPiel });
             const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.25), matR);
             torso.position.y = 1.2; torso.name = "torso";
-            const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), matP);
-            cabeza.position.y = 0.45; cabeza.scale.y = 1.2; torso.add(cabeza);
+            const cabeza = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), matP); // Menos polígonos
+            cabeza.position.y = 0.45; torso.add(cabeza);
             const bD = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.12), matP); 
             bD.position.set(0.35, 0, 0); bD.name = "brazoDer"; torso.add(bD);
             const bI = bD.clone(); bI.position.x = -0.35; bI.name = "brazoIzq"; torso.add(bI);
@@ -184,11 +163,10 @@
 
         const jony = crearHumanoide(0x2244aa, 0xffdbac, false);
         jony.position.set(-8, 0, 9); scene.add(jony);
-
         const maniqui = crearHumanoide(0xffffff, 0xffffff, true);
         maniqui.position.set(10, 0, -13); scene.add(maniqui);
 
-        // --- LÓGICA ---
+        // --- LÓGICA Y CONTROLES ---
         const controls = new PointerLockControls(camera, document.body);
         document.getElementById('btn-jugar').onclick = () => {
             document.getElementById('menu-inicio').style.display = 'none';
@@ -198,12 +176,12 @@
             camera.position.set(0, 1.7, 13); 
         };
 
-        const puntosSpawn = [{x: 0, z: 5}, {x: 0, z: -8}, {x: 8, z: 12}, {x: -8, z: -2}, {x: 0, z: -14}];
+        const puntosSpawn = [{x: 0, z: 5}, {x: 0, z: -8}, {x: 8, z: 12}, {x: -8, z: -2}];
         const itemsMision = [];
         function spawnCajas() {
             itemsMision.forEach(c => scene.remove(c)); itemsMision.length = 0;
             puntosSpawn.sort(() => 0.5 - Math.random()).slice(0, 3).forEach(p => {
-                const c = crearCaja(0.7, 0.7, 0.7, p.x, p.z, 0x8b4513, false);
+                const c = crearCaja(0.7, 0.7, 0.7, p.x, p.z, 0x442200, false);
                 itemsMision.push(c);
             });
         }
@@ -215,31 +193,7 @@
 
         function decir(txt) {
             document.getElementById('subtitulos').innerText = txt;
-            setTimeout(() => { if(document.getElementById('subtitulos').innerText === txt) document.getElementById('subtitulos').innerText = ""; }, 4500);
-        }
-
-        const datosDialogo = {
-            1: { pregunta: "Jony: ¡Hola Alejo! Linda noche, ¿no?", opciones: [{ t: "Sí, ojalá terminemos temprano.", r: "Jony: Olvidate, hay que acomodar todo." }, { t: "No tengo ganas hoy.", r: "Jony: Yo tampoco, pero bue..." }] },
-            2: { pregunta: "Jony: Las calles de afuera están re oscuras hoy.", opciones: [{ t: "Ojalá no me roben volviendo.", r: "Jony: Seguí los postes de luz." }, { t: "No pasa nada.", r: "Jony: Si vos decís..." }] },
-            3: { pregunta: "Jony: Odio que tengas que volver caminando a tu casa.", opciones: [{ t: "Son unas cuadras nomás.", r: "Jony: Igual. Tené cuidado al salir." }, { t: "Me da igual.", r: "Jony: Que coraje." }] },
-            4: { pregunta: "Jony: Escuché pasos arriba...", opciones: [{ t: "Ratas.", r: "Jony: Pasos pesados eran..." }, { t: "Flashás.", r: "Jony: Capaz..." }] },
-            5: { pregunta: "Jony: El maniquí se movió...", opciones: [{ t: "Es el viento.", r: "Jony: No hay viento acá Alejo." }, { t: "Estás cansado.", r: "Jony: Puede ser." }] },
-            6: { pregunta: "Jony: Me voy Alejo, esto me da miedo.", opciones: [{ t: "Quedate, es la última.", r: "Jony: Bueno... solo por vos." }, { t: "No seas cagón.", r: "Jony: Tenés razón." }] }
-        };
-
-        function mostrarMenuDialogo(n) {
-            controls.unlock();
-            const menu = document.getElementById('menu-dialogo');
-            menu.style.display = 'block';
-            document.getElementById('pregunta-jony').innerText = datosDialogo[n].pregunta;
-            const cont = document.getElementById('contenedor-opciones');
-            cont.innerHTML = "";
-            datosDialogo[n].opciones.forEach(opc => {
-                const btn = document.createElement('button');
-                btn.className = "opcion-btn"; btn.innerText = opc.t;
-                btn.onclick = () => { menu.style.display = 'none'; decir(opc.r); misionPaso = 1; document.getElementById('objetivo').innerText = "Objetivo: Recoge las 3 cajas en la tienda."; controls.lock(); };
-                cont.appendChild(btn);
-            });
+            setTimeout(() => { if(document.getElementById('subtitulos').innerText === txt) document.getElementById('subtitulos').innerText = ""; }, 4000);
         }
 
         function setNoche(n) {
@@ -248,24 +202,23 @@
             document.getElementById('noche-info').innerText = `NOCHE ${n}`;
             document.getElementById('objetivo').innerText = "Objetivo: Habla con Jony en el local.";
             spawnCajas();
-            
             if(n === 7) {
-                luzAmbiental.intensity = 0.02; luzTienda.intensity = 0; flashlight.intensity = 6; 
+                luzTienda.intensity = 0; flashlight.intensity = 5; 
                 scene.remove(jony);
-                crearCaja(2, 0.01, 2, -8, 9, 0x440000, false); 
-                document.getElementById('objetivo').innerText = "Objetivo: ¿Jony?";
+                crearCaja(2, 0.01, 2, -8, 9, 0x330000, false); 
             }
         }
 
         function update() {
             requestAnimationFrame(update);
             if (!iniciado || !controls.isLocked || muerto) return;
-            const oldPos = camera.position.clone();
             
-            if(keys['KeyW']) controls.moveForward(0.25);
-            if(keys['KeyS']) controls.moveForward(-0.25);
-            if(keys['KeyA']) controls.moveRight(-0.25);
-            if(keys['KeyD']) controls.moveRight(0.25);
+            const oldPos = camera.position.clone();
+            const speed = 0.22;
+            if(keys['KeyW']) controls.moveForward(speed);
+            if(keys['KeyS']) controls.moveForward(-speed);
+            if(keys['KeyA']) controls.moveRight(-speed);
+            if(keys['KeyD']) controls.moveRight(speed);
 
             const pBox = new THREE.Box3().setFromCenterAndSize(camera.position, new THREE.Vector3(0.6, 1.8, 0.6));
             for(let box of colisionables) { if(pBox.intersectsBox(box)) camera.position.copy(oldPos); }
@@ -273,47 +226,41 @@
             const pPos = camera.position;
             
             if(noche < 7) {
-                if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) { mostrarMenuDialogo(noche); misionPaso = -1; }
+                if(misionPaso === 0 && pPos.distanceTo(jony.position) < 2.5) {
+                    decir("Jony: ¡Terminá rápido y andate a casa, Alejo!");
+                    misionPaso = 1;
+                    document.getElementById('objetivo').innerText = "Objetivo: Recoge las 3 cajas.";
+                }
                 if(misionPaso === 1) {
                     itemsMision.forEach((c, i) => {
                         if(pPos.distanceTo(c.position) < 2) {
                             scene.remove(c); itemsMision.splice(i, 1);
-                            cajasRecogidas++; decir(`Cajas: ${cajasRecogidas}/3`);
+                            cajasRecogidas++;
                             if(cajasRecogidas === 3) { 
-                                document.getElementById('objetivo').innerText = "Fin del turno. Camina hasta tu casa (Luz verde)."; 
+                                document.getElementById('objetivo').innerText = "Vuelve a casa (Sigue las luces verdes)."; 
                                 misionPaso = 2; 
                             }
                         }
                     });
                 }
-                if(misionPaso === 2 && pPos.distanceTo(posCasa) < 14) {
-                    decir("Llegaste a casa a salvo...");
+                if(misionPaso === 2 && pPos.distanceTo(posCasa) < 12) {
                     setNoche(noche + 1);
                 }
-            } 
-            else {
+            } else {
                 if(misionPaso === 0 && pPos.distanceTo(new THREE.Vector3(-8, 1, 9)) < 2.5) {
-                    decir("¡LO MATÓ!"); misionPaso = 1; document.getElementById('objetivo').innerText = "¡CORRE A TU CASA!";
+                    decir("¡JONY NO ESTÁ! ¡CORRE!"); misionPaso = 1;
+                    document.getElementById('objetivo').innerText = "¡HUYE A TU CASA!";
                 }
                 if(misionPaso === 1) {
                     const distM = pPos.distanceTo(maniqui.position);
-                    if(distM < 25 && !persiguiendo) {
-                        persiguiendo = true;
-                        maniqui.getObjectByName("torso").rotation.x = Math.PI / 2.5; 
-                        maniqui.getObjectByName("torso").position.y = 0.5; 
-                        maniqui.getObjectByName("brazoDer").rotation.x = -Math.PI / 2; 
-                        maniqui.getObjectByName("brazoIzq").rotation.x = -Math.PI / 2;
-                    }
+                    if(distM < 25) persiguiendo = true;
                     if(persiguiendo) {
                         const d = new THREE.Vector3().subVectors(pPos, maniqui.position).normalize();
                         maniqui.position.addScaledVector(d, 0.23);
                         maniqui.lookAt(pPos.x, 0, pPos.z);
                         if(distM < 1.5) { muerto = true; final("Muerte"); }
                     }
-                    if(pPos.distanceTo(posCasa) < 14) {
-                        muerto = true;
-                        final("Salvado");
-                    }
+                    if(pPos.distanceTo(posCasa) < 12) { muerto = true; final("Salvado"); }
                 }
             }
             renderer.render(scene, camera);
@@ -322,12 +269,9 @@
         function final(tipo) {
             controls.unlock();
             document.getElementById('pantalla-final').style.display = 'block';
-            if(tipo === "Muerte") {
-                document.getElementById('noticia-texto').innerText = "CHIMBAS - Jonathan y Alejo desaparecieron. Testigos afirman haber escuchado gritos cerca de los postes de luz de la avenida.";
-            } else {
-                document.getElementById('noticia-texto').innerText = "CHIMBAS - Sobreviviste. Alejo llegó a su casa aterrorizado. Jonathan fue hallado sin vida en la tienda. La figura blanca de Chimbas sigue libre...";
-                document.querySelector('#pantalla-final button').innerText = "VOLVER A JUGAR";
-            }
+            document.getElementById('noticia-texto').innerText = (tipo === "Muerte") ? 
+                "Alejo nunca llegó a casa. Solo se encontró su linterna en una calle de Chimbas." : 
+                "Lograste cerrar la puerta justo a tiempo. Mañana no vuelves a ese local.";
         }
         update();
     </script>
